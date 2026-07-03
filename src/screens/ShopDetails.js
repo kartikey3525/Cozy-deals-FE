@@ -1,35 +1,34 @@
+import {useIsFocused} from '@react-navigation/native';
 import React, {useContext, useEffect, useState} from 'react';
 import {
-  View,
+  Alert,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  Image,
-  ScrollView,
-  Pressable,
-  Linking,
-  Alert,
+  View,
 } from 'react-native';
-import Octicons from 'react-native-vector-icons/Octicons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import Feather from 'react-native-vector-icons/Feather';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useIsFocused} from '@react-navigation/native';
-import {ThemeContext} from '../context/themeContext';
 import Entypo from 'react-native-vector-icons/Entypo';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Octicons from 'react-native-vector-icons/Octicons';
+import {ThemeContext} from '../context/themeContext';
 
+import * as scale from 'd3-scale';
 import {Dimensions} from 'react-native';
+import {G, Rect} from 'react-native-svg';
+import {BarChart, Grid, YAxis} from 'react-native-svg-charts';
+import {SceneMap, TabBar, TabView} from 'react-native-tab-view';
+import Header from '../components/Header';
+import HorizontalRatingButtons from '../components/HorizontalRating';
+import RatingTest from '../components/RatingTest';
 import {AuthContext} from '../context/authcontext';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
-import {TabView, SceneMap, TabBar} from 'react-native-tab-view';
-import {BarChart, YAxis, Grid} from 'react-native-svg-charts';
-import {G, Rect} from 'react-native-svg';
-import * as scale from 'd3-scale';
-import HorizontalRatingButtons from '../components/HorizontalRating';
-import Header from '../components/Header';
-import RatingTest from '../components/RatingTest';
 export default function ShopDetails({navigation, route}) {
   const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
@@ -85,6 +84,7 @@ export default function ShopDetails({navigation, route}) {
 
   useEffect(() => {
     if (userId) {
+      console.log('userId', route?.params?.item);
       if (
         !route?.params?.item?.categoriesPost ||
         route?.params?.item?.categoriesPost.length === 0
@@ -235,6 +235,24 @@ export default function ShopDetails({navigation, route}) {
   };
 
   // Calculate dynamic heights for each tab
+  const [tabHeights, setTabHeights] = useState({
+    overview: 0,
+    category: 0,
+    review: 0,
+    photos: 0,
+  });
+
+  const updateTabHeight = (key, height) => {
+    setTabHeights(prev => {
+      if (prev[key] === height) return prev;
+
+      return {
+        ...prev,
+        [key]: height,
+      };
+    });
+  };
+
   const getDynamicTabHeight = () => {
     const categories =
       route?.params?.item?.categoriesPost?.length > 0
@@ -268,8 +286,9 @@ export default function ShopDetails({navigation, route}) {
   };
 
   const Overview = () => (
-    <View>
-      <View style={{height: '100%', flexGrow: 1}}>
+    <View
+      onLayout={e => updateTabHeight('overview', e.nativeEvent.layout.height)}>
+      <View style={{flexGrow: 1}}>
         <TouchableOpacity
           onPress={toggleDetails}
           style={{flexDirection: 'row', alignItems: 'center'}}>
@@ -516,27 +535,27 @@ export default function ShopDetails({navigation, route}) {
         </TouchableOpacity>
         {sortedRatings?.length > 0 ? (
           <View style={[styles.ratingsContainer, {marginTop: '2%'}]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {sortedRatings?.length > 0 ? (
-                sortedRatings.map((item, index) => (
-                  <View key={item?.id || index}>
-                    {render2RectangleList(item, index)}
-                  </View>
-                ))
-              ) : (
-                <Text
-                  style={[
-                    styles.smallText,
-                    {
-                      color: isDark ? 'white' : 'black',
-                      alignSelf: 'center',
-                      paddingVertical: 20,
-                    },
-                  ]}>
-                  No Ratings Available
-                </Text>
-              )}
-            </ScrollView>
+            {/* <ScrollView showsVerticalScrollIndicator={false}> */}
+            {sortedRatings?.length > 0 ? (
+              sortedRatings.map((item, index) => (
+                <View key={item?.id || index}>
+                  {render2RectangleList(item, index)}
+                </View>
+              ))
+            ) : (
+              <Text
+                style={[
+                  styles.smallText,
+                  {
+                    color: isDark ? 'white' : 'black',
+                    alignSelf: 'center',
+                    paddingVertical: 20,
+                  },
+                ]}>
+                No Ratings Available
+              </Text>
+            )}
+            {/* </ScrollView> */}
           </View>
         ) : (
           <Text
@@ -563,12 +582,7 @@ export default function ShopDetails({navigation, route}) {
         </Text>
         <View style={{width: '95%', marginLeft: 10}}>
           <View style={{marginTop: '2%', padding: 5}}>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={false}
-              style={{
-                maxHeight: 300,
-              }}>
+            <View>
               {Array.from(
                 {
                   length: Math.ceil(
@@ -600,7 +614,7 @@ export default function ShopDetails({navigation, route}) {
                   </View>
                 ),
               )}
-            </ScrollView>
+            </View>
           </View>
         </View>
       </View>
@@ -608,64 +622,64 @@ export default function ShopDetails({navigation, route}) {
   );
 
   const Category = () => (
-    <View>
-      <View style={{}}>
+    <View
+      onLayout={e => updateTabHeight('category', e.nativeEvent.layout.height)}>
+      <Text
+        style={[
+          styles.bigText,
+          {
+            alignSelf: 'flex-start',
+            fontSize: 18,
+            left: 25,
+            marginTop: 5,
+            marginBottom: 0,
+            color: isDark ? 'white' : 'black',
+          },
+        ]}>
+        Product categories
+      </Text>
+      <View style={{width: '95%', marginLeft: 14}}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{marginTop: '2%', padding: 5}}>
+          {(route?.params?.item?.categoriesPost?.length > 0
+            ? route.params.item.categoriesPost
+            : singleShop?.categoriesPost ?? []
+          ).map((item, index) => (
+            <View
+              key={item?.id ?? `category-${index}`}
+              style={{marginRight: 10}}>
+              {renderRectangleList(item, index)}
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+      <TouchableOpacity
+        style={styles.blueBotton}
+        onPress={() =>
+          navigation.navigate('productcategories', {
+            item:
+              route?.params?.item?.categoriesPost?.length > 0
+                ? route?.params?.item?.categoriesPost
+                : singleShop?.categoriesPost,
+          })
+        }>
         <Text
           style={[
-            styles.bigText,
-            {
-              alignSelf: 'flex-start',
-              fontSize: 18,
-              left: 25,
-              marginTop: 5,
-              marginBottom: 0,
-              color: isDark ? 'white' : 'black',
-            },
+            styles.smallText,
+            {color: '#fff', fontSize: 20, marginBottom: 0},
           ]}>
-          Product categories
+          Categories
         </Text>
-        <View style={{width: '95%', marginLeft: 14}}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{marginTop: '2%', padding: 5}}>
-            {(route?.params?.item?.categoriesPost?.length > 0
-              ? route.params.item.categoriesPost
-              : singleShop?.categoriesPost ?? []
-            ).map((item, index) => (
-              <View
-                key={item?.id ?? `category-${index}`}
-                style={{marginRight: 10}}>
-                {renderRectangleList(item, index)}
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-        <TouchableOpacity
-          style={styles.blueBotton}
-          onPress={() =>
-            navigation.navigate('productcategories', {
-              item:
-                route?.params?.item?.categoriesPost?.length > 0
-                  ? route?.params?.item?.categoriesPost
-                  : singleShop?.categoriesPost,
-            })
-          }>
-          <Text
-            style={[
-              styles.smallText,
-              {color: '#fff', fontSize: 20, marginBottom: 0},
-            ]}>
-            Categories
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 
   const Review = () => (
-    <View>
-      <View style={{height: '75%', flexGrow: 1}}>
+    <View
+      onLayout={e => updateTabHeight('review', e.nativeEvent.layout.height)}>
+      <View style={{flexGrow: 1}}>
         <Text
           style={[
             styles.bigText,
@@ -835,34 +849,35 @@ export default function ShopDetails({navigation, route}) {
           </Text>
         </TouchableOpacity>
         <View style={[styles.ratingsContainer, {marginTop: '2%'}]}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {sortedRatings?.length > 0 ? (
-              sortedRatings.map((item, index) => (
-                <View key={item?.id || index}>
-                  {render2RectangleList(item, index)}
-                </View>
-              ))
-            ) : (
-              <Text
-                style={[
-                  styles.smallText,
-                  {
-                    color: isDark ? 'white' : 'black',
-                    alignSelf: 'center',
-                    paddingVertical: 20,
-                  },
-                ]}>
-                No Ratings Available
-              </Text>
-            )}
-          </ScrollView>
+          {/* <ScrollView showsVerticalScrollIndicator={false}> */}
+          {sortedRatings?.length > 0 ? (
+            sortedRatings.map((item, index) => (
+              <View key={item?.id || index}>
+                {render2RectangleList(item, index)}
+              </View>
+            ))
+          ) : (
+            <Text
+              style={[
+                styles.smallText,
+                {
+                  color: isDark ? 'white' : 'black',
+                  alignSelf: 'center',
+                  paddingVertical: 20,
+                },
+              ]}>
+              No Ratings Available
+            </Text>
+          )}
+          {/* </ScrollView> */}
         </View>
       </View>
     </View>
   );
 
   const Photos = () => (
-    <View>
+    <View
+      onLayout={e => updateTabHeight('photos', e.nativeEvent.layout.height)}>
       <Text
         style={[
           styles.bigText,
@@ -879,12 +894,7 @@ export default function ShopDetails({navigation, route}) {
       </Text>
       <View style={{width: '95%', marginLeft: 10}}>
         <View style={{marginTop: '2%', padding: 5}}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={false}
-            style={{
-              maxHeight: 300,
-            }}>
+        <View>
             {Array.from(
               {
                 length: Math.ceil(
@@ -916,7 +926,7 @@ export default function ShopDetails({navigation, route}) {
                 </View>
               ),
             )}
-          </ScrollView>
+          </View>
         </View>
       </View>
     </View>
@@ -1147,7 +1157,7 @@ export default function ShopDetails({navigation, route}) {
         style={[styles.container, {backgroundColor: isDark ? '#000' : '#fff'}]}
         showsVerticalScrollIndicator={false}>
         <View
-          style={{ 
+          style={{
             width: '100%',
             justifyContent: 'center',
             alignItems: 'center',
@@ -1372,7 +1382,20 @@ export default function ShopDetails({navigation, route}) {
               />
             </Pressable>
           </View>
-          <View style={[styles.tabContainer, {height: getDynamicTabHeight()}]}>
+          <View
+            style={[
+              styles.tabContainer,
+              {
+                height:
+                  index === 0
+                    ? Math.max(tabHeights.overview, 500)
+                    : index === 1
+                    ? Math.max(tabHeights.category, 500)
+                    : index === 2
+                    ? Math.max(tabHeights.review, 500)
+                    : Math.max(tabHeights.photos, 500),
+              },
+            ]}>
             <TabView
               swipeEnabled={false}
               navigationState={{index, routes}}
@@ -1618,7 +1641,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'grey',
     left: 25,
-    width: '95%',
+    width: '80%',
     marginTop: 5,
     marginBottom: 0,
   },

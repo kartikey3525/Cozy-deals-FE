@@ -1,10 +1,10 @@
-import {View, Text, Dimensions} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import React, {useContext} from 'react';
+import {Dimensions, Text, View} from 'react-native';
 import Entypo from 'react-native-vector-icons/Entypo';
 import {ThemeContext} from '../context/themeContext';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
-import {useNavigation} from '@react-navigation/native';
 
 export default function Header({header}) {
   const navigation = useNavigation();
@@ -18,7 +18,7 @@ export default function Header({header}) {
           alignItems: 'center',
           width: Width,
           flexDirection: 'row',
-          height: Height * 0.1,
+          height: Height * 0.07,
           justifyContent: 'flex-start',
         }}>
         <Entypo

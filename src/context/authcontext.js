@@ -25,6 +25,24 @@ const apiClient = axios.create({
   timeout: 10000,
 });
 
+let logoutHandler = null;
+
+export const registerLogoutHandler = handler => {
+  logoutHandler = handler;
+};
+
+apiClient.interceptors.response.use(
+  response => response,
+  async error => {
+    const status = error.response?.status;
+
+    if ((status === 401 || status === 403) && logoutHandler) {
+      await logoutHandler();
+    }
+
+    return Promise.reject(error);
+  },
+);
 // Helper to get auth headers
 const getAuthHeaders = token => ({
   Authorization: `Bearer ${token}`,
@@ -305,15 +323,31 @@ const AuthProvider = ({children}) => {
         roleId: userRole === 'buyer' ? 0 : 1,
         fcmToken,
       });
-      const user = response.data;
-      setUserdata(user);
+      const loginResponse = response.data;
+
+      const profileResponse = await apiClient.get('/api/user/getProfile', {
+        headers: getAuthHeaders(loginResponse.token),
+      });
+
+      const latestUser = {
+        token: loginResponse.token,
+        ...profileResponse.data.data,
+      };
+
+      setUserdata(latestUser);
+      setUserfulldata(profileResponse.data.data);
+      setIsLoggedIn(true);
       await AsyncStorage.multiSet([
-        ['userToken', user.token],
-        ['userData', JSON.stringify(user)],
+        ['userToken', latestUser.token],
+        ['userData', JSON.stringify(latestUser)],
         ['selectedUserRole', userRole],
         ['rememberMe', rememberMe ? 'true' : 'false'],
       ]);
-      navigation.navigate('BottomTabs');
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'BottomTabs'}],
+      });
     } catch (error) {
       handleApiError(error, 'Invalid credentials.');
     } finally {
@@ -413,22 +447,16 @@ const AuthProvider = ({children}) => {
    */
   const handleLogout = async () => {
     try {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-      }
       await GoogleSignin.signOut();
-      await AsyncStorage.multiRemove([
-        'userToken',
-        'userData',
-        'selectedUserRole',
-      ]);
-      setUserdata(null);
-      setUserfulldata(null);
-      setIsLoggedIn(false);
-      navigation.reset({index: 0, routes: [{name: 'commonscreen'}]});
+
+      await clearSession();
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'commonscreen'}],
+      });
     } catch (error) {
-      handleApiError(error, 'Something went wrong while logging out.');
+      handleApiError(error);
     }
   };
 
@@ -883,7 +911,23 @@ const AuthProvider = ({children}) => {
       const response = await apiClient.get('/api/user/getProfile', {
         headers: getAuthHeaders(userdata?.token),
       });
-      setUserfulldata(response.data.data);
+      const latest = response.data.data;
+
+      setUserfulldata(latest);
+
+      setUserdata(prev => ({
+        ...prev,
+        ...latest,
+      }));
+
+      const updatedUser = {
+        ...(userdata || {}),
+        ...latest,
+      };
+
+      setUserdata(updatedUser);
+
+      await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
     } catch (error) {
       handleApiError(error, 'Failed to load user data.');
     }
@@ -1011,7 +1055,7 @@ const AuthProvider = ({children}) => {
       await apiClient.delete('/api/user/deleteProfile', {
         headers: getAuthHeaders(userdata?.token),
       });
-      await AsyncStorage.multiRemove(['userToken', 'userData']);
+      await clearSession();
       setUserdata(null);
       setIsLoggedIn(false);
       navigation.reset({index: 0, routes: [{name: 'commonscreen'}]});
@@ -1045,27 +1089,83 @@ const AuthProvider = ({children}) => {
     }
   };
 
+  const clearSession = async () => {
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
+
+    await AsyncStorage.multiRemove([
+      'userToken',
+      'userData',
+      'selectedUserRole',
+      'rememberMe',
+    ]);
+
+    setUserdata(null);
+    setUserfulldata(null);
+    setIsLoggedIn(false);
+  };
+
+  useEffect(() => {
+    registerLogoutHandler(async () => {
+      await clearSession();
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'commonscreen'}],
+      });
+    });
+  }, []);
+
   const checkLoginStatus = async () => {
     try {
-      const [rememberMe, token, userData, userRole] =
-        await AsyncStorage.multiGet([
-          'rememberMe',
-          'userToken',
-          'userData',
-          'selectedUserRole',
-        ]);
-      if (rememberMe[1] === 'true' && token[1] && userData[1]) {
-        const parsedUserData = JSON.parse(userData[1]);
-        setUserdata(parsedUserData);
-        initializeSocket();
-        if (navigation.isReady()) {
-          navigation.navigate('BottomTabs');
-        }
-      } else if (token[1] && userData[1]) {
-        await handleLogout();
+      const [[, rememberMe], [, token]] = await AsyncStorage.multiGet([
+        'rememberMe',
+        'userToken',
+      ]);
+
+      if (!token) {
+        return;
       }
+
+      // Validate token with backend
+      const response = await apiClient.get('/api/user/getProfile', {
+        headers: getAuthHeaders(token),
+      });
+
+      const latestUser = response.data.data;
+
+      setUserfulldata(latestUser);
+
+      setUserdata({
+        token,
+        ...latestUser,
+      });
+      setIsLoggedIn(true);
+      await AsyncStorage.setItem(
+        'userData',
+        JSON.stringify({
+          token,
+          ...latestUser,
+        }),
+      );
+
+      initializeSocket();
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'BottomTabs'}],
+      });
     } catch (error) {
-      console.error('Error checking login status:', error);
+      console.log('Session expired');
+
+      await clearSession();
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'commonscreen'}],
+      });
     }
   };
 

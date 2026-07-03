@@ -1,18 +1,18 @@
+import {useIsFocused} from '@react-navigation/native';
 import React, {useContext, useEffect, useState} from 'react';
 import {
-  View,
+  Image,
+  Modal,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
-  Image,
-  Pressable,
-  Modal,
+  View,
 } from 'react-native';
-import Feather from 'react-native-vector-icons/Feather';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import {useIsFocused} from '@react-navigation/native';
-import {ThemeContext} from '../context/themeContext';
 import Entypo from 'react-native-vector-icons/Entypo';
+import Feather from 'react-native-vector-icons/Feather';
+import {ThemeContext} from '../context/themeContext';
 
 import {Dimensions} from 'react-native';
 import {AuthContext} from '../context/authcontext';
@@ -69,10 +69,12 @@ export default function ProfileScreen({navigation}) {
           <View style={styles.modalContent}>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
               <TouchableOpacity
-                onPress={() =>  navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'BottomTabs' }],
-                })}>
+                onPress={() =>
+                  navigation.reset({
+                    index: 0,
+                    routes: [{name: 'BottomTabs'}],
+                  })
+                }>
                 <Entypo
                   name="chevron-thin-left"
                   size={20}
@@ -109,7 +111,7 @@ export default function ProfileScreen({navigation}) {
                 shadowColor: isDark ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)',
                 shadowOffset: {width: 0, height: 2}, // Shadow offset
                 shadowOpacity: 0.25, // Shadow opacity
-                shadowRadius: 3.84, 
+                shadowRadius: 3.84,
                 elevation: 10,
                 borderRadius: 5,
               }}>
@@ -178,7 +180,7 @@ export default function ProfileScreen({navigation}) {
             <View
               style={{
                 width: Width * 0.9,
-                height: Height * (userRole === 'buyer' ? 0.58 : 0.45),
+                height: Height * (userRole === 'buyer' ? 0.52 : 0.45),
                 marginTop: 14,
                 borderRadius: 5,
                 backgroundColor: isDark ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)', // Add background color for shadow to work
@@ -407,7 +409,7 @@ export default function ProfileScreen({navigation}) {
 
               {userRole === 'buyer' ? (
                 <>
-                  <Pressable
+                  {/* <Pressable
                     style={{
                       width: '100%',
                       height: Height * 0.065,
@@ -456,7 +458,7 @@ export default function ProfileScreen({navigation}) {
                         style={{padding: 5}}
                       />
                     </View>
-                  </Pressable>
+                  </Pressable> */}
 
                   <Pressable
                     style={{

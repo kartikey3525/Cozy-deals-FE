@@ -1,27 +1,27 @@
+import {useIsFocused} from '@react-navigation/native';
+import React, {useContext, useEffect, useState} from 'react';
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
   ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import React, {useContext, useState, useEffect} from 'react';
 import {HelperText} from 'react-native-paper';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Entypo from 'react-native-vector-icons/Entypo';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Dropdown from '../components/Dropdown';
+import Header from '../components/Header';
 import {AuthContext} from '../context/authcontext';
-import {Dimensions} from 'react-native';
+import {ThemeContext} from '../context/themeContext';
+import useImagePicker1 from '../hooks/useImagePicker1';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
-import {ThemeContext} from '../context/themeContext';
-import Header from '../components/Header';
-import useImagePicker1 from '../hooks/useImagePicker1';
-import {TextInput} from 'react-native';
-import Dropdown from '../components/Dropdown';
-import {useIsFocused} from '@react-navigation/native';
 
 export default function AddProducts({navigation, route}) {
   const {productData, isEditMode, isShowMode} = route.params || {};
@@ -96,7 +96,6 @@ export default function AddProducts({navigation, route}) {
       setSelectedCategories(productData.categories || []);
       setMedia(productData.images?.[0] || null);
     }
-    
   }, [isFocused]);
 
   useEffect(() => {
@@ -241,12 +240,23 @@ export default function AddProducts({navigation, route}) {
 
   return (
     <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={[
-        styles.screen,
-        {backgroundColor: isDark ? '#000' : '#FFFFFF'},
-      ]}>
-      <Header header={isEditMode ? 'Edit Product' :isShowMode ? 'Product Details' : 'Add Product'} />
+      keyboardShouldPersistTaps="always"
+      nestedScrollEnabled
+      contentContainerStyle={{
+        backgroundColor: isDark ? '#000' : '#fff',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingBottom: 100,
+      }}>
+      <Header
+        header={
+          isEditMode
+            ? 'Edit Product'
+            : isShowMode
+            ? 'Product Details'
+            : 'Add Product'
+        }
+      />
 
       <Text
         style={[
@@ -264,11 +274,13 @@ export default function AddProducts({navigation, route}) {
               source={{uri: media}}
               style={[styles.mediaSelector, {borderWidth: 0}]}
             />
-           {!isShowMode &&( <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setMedia(null)}>
-              <Entypo name="cross" size={25} color={'black'} />
-            </TouchableOpacity>)}
+            {!isShowMode && (
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setMedia(null)}>
+                <Entypo name="cross" size={25} color={'black'} />
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <TouchableOpacity onPress={selectMedia}>
@@ -379,23 +391,22 @@ export default function AddProducts({navigation, route}) {
       </HelperText>
 
       {/* Sticky Add Button */}
-      {!isEditMode &&!isShowMode &&   (
+      {!isEditMode && !isShowMode && (
         <View
           style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 1,
             alignSelf: 'flex-end',
             marginRight: '5%',
+            marginVertical: 10,
           }}>
           <TouchableOpacity
             style={{
-              width: Width * 0.15,
-              borderRadius: 20,
+              // width: Width * 0.15,
+              borderRadius: 10,
               borderColor: 'rgba(6, 196, 217, 1)',
               borderWidth: 1,
               alignItems: 'center',
               paddingVertical: 4,
+              paddingHorizontal: 20,
             }}
             onPress={handleAddProduct}>
             <Text
@@ -403,10 +414,10 @@ export default function AddProducts({navigation, route}) {
                 styles.buttonText,
                 {
                   color: 'rgba(6, 196, 217, 1)',
-                  fontSize: 38,
+                  fontSize: 18,
                 },
               ]}>
-              {editingIndex !== null ? 'Update' : '+'}
+              {editingIndex !== null ? 'Update' : 'Add +'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -414,85 +425,87 @@ export default function AddProducts({navigation, route}) {
 
       {/* Display Products (only if products exist) */}
       {!isEditMode && products.length > 0 && (
-        <View style={{maxHeight: 260, alignSelf: 'flex-start'}}>
-          <ScrollView
-            nestedScrollEnabled={true}
-            showsVerticalScrollIndicator={false}>
-            {Object.keys(groupedProducts).map(category => (
-              <View
-                key={category}
+        <View
+          style={{
+            alignSelf: 'flex-start',
+            width: '100%',
+            marginBottom: 20,
+          }}>
+          {Object.keys(groupedProducts).map(category => (
+            <View
+              key={category}
+              style={{
+                marginBottom: 10,
+                alignSelf: 'flex-start',
+                width: '100%',
+                paddingLeft: 10,
+              }}>
+              <Text
                 style={{
-                  marginBottom: 10,
-                  alignSelf: 'flex-start',
-                  width: '100%',
-                  paddingLeft: 10,
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  color: isDark ? '#fff' : 'rgb(0, 0, 0)',
+                  marginBottom: 5,
                 }}>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 'bold',
-                    color: isDark ? '#fff' : 'rgb(0, 0, 0)',
-                    marginBottom: 5,
-                  }}>
-                  {category}
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    {groupedProducts[category].map((product, index) => (
-                      <View
-                        key={index}
-                        style={{padding: 6, borderRadius: 5, marginRight: 5}}>
-                        <View style={{position: 'relative'}}>
-                          <TouchableOpacity
-                            onPress={() => handleEditProduct(category, index)}>
-                            <Image
-                              source={{uri: product.images?.[0]}}
-                              style={{
-                                width: 60,
-                                height: 60,
-                                borderRadius: 5,
-                                borderWidth: 2,
-                                borderColor: isDark ? 'white' : 'black',
-                              }}
-                            />
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                {category}
+              </Text>
+              <ScrollView
+                horizontal
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="always">
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  {groupedProducts[category].map((product, index) => (
+                    <View
+                      key={index}
+                      style={{padding: 6, borderRadius: 5, marginRight: 5}}>
+                      <View style={{position: 'relative'}}>
+                        <TouchableOpacity
+                          onPress={() => handleEditProduct(category, index)}>
+                          <Image
+                            source={{uri: product.images?.[0]}}
                             style={{
-                              position: 'absolute',
-                              top: -5,
-                              right: 8,
-                              backgroundColor: isDark ? 'black' : 'white',
-                              borderRadius: 10,
-                              padding: 2,
+                              width: 60,
+                              height: 60,
+                              borderRadius: 5,
+                              borderWidth: 2,
+                              borderColor: isDark ? 'white' : 'black',
                             }}
-                            onPress={() =>
-                              handleRemoveProduct(category, index)
-                            }>
-                            <Entypo
-                              name="cross"
-                              size={18}
-                              color={isDark ? 'white' : 'black'}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                        <Text
-                          numberOfLines={1}
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
                           style={{
-                            fontSize: 14,
-                            fontWeight: 'bold',
-                            width: 80,
-                            color: isDark ? '#fff' : 'rgb(0, 0, 0)',
-                            marginTop: 5,
-                          }}>
-                          {product.title}
-                        </Text>
+                            position: 'absolute',
+                            top: -5,
+                            right: 8,
+                            backgroundColor: isDark ? 'black' : 'white',
+                            borderRadius: 10,
+                            padding: 2,
+                          }}
+                          onPress={() => handleRemoveProduct(category, index)}>
+                          <Entypo
+                            name="cross"
+                            size={18}
+                            color={isDark ? 'white' : 'black'}
+                          />
+                        </TouchableOpacity>
                       </View>
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-            ))}
-          </ScrollView>
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 'bold',
+                          width: 80,
+                          color: isDark ? '#fff' : 'rgb(0, 0, 0)',
+                          marginTop: 5,
+                        }}>
+                        {product.title}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          ))}
         </View>
       )}
 
@@ -503,20 +516,29 @@ export default function AddProducts({navigation, route}) {
         {errors.products}
       </HelperText>
 
-     {!isShowMode &&(   <TouchableOpacity
-        style={[styles.blueButton, {margin: '20%'}]}
-        onPress={handlePress}
-        disabled={isLoading2}>
-        <Text style={[styles.buttonText, {color: '#fff'}]}>
-          {isLoading2 ? (
-            <ActivityIndicator color="#fff" />
-          ) : isEditMode ? (
-            'Update Product'
-          ) : (
-            'Submit Products'
-          )}
-        </Text>
-      </TouchableOpacity>)}
+      {!isShowMode && (
+        <TouchableOpacity
+          style={[
+            styles.blueButton,
+            {
+              // marginTop: 20,
+              // marginBottom: 20,
+              alignSelf: 'center',
+            },
+          ]}
+          onPress={handlePress}
+          disabled={isLoading2}>
+          <Text style={[styles.buttonText, {color: '#fff'}]}>
+            {isLoading2 ? (
+              <ActivityIndicator color="#fff" />
+            ) : isEditMode ? (
+              'Update Product'
+            ) : (
+              'Submit Products'
+            )}
+          </Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -530,7 +552,6 @@ const styles = StyleSheet.create({
     width: '90%',
     borderWidth: 1,
     borderRadius: 8,
-    marginBottom: 5,
   },
   textInput: {
     backgroundColor: '#FFFFFF',
@@ -538,8 +559,7 @@ const styles = StyleSheet.create({
     color: '#000',
     width: '86%',
     height: 50,
-    padding: 10,
-    margin: 4,
+    padding: 5,
   },
   closeButton: {
     position: 'absolute',
@@ -562,7 +582,7 @@ const styles = StyleSheet.create({
   },
   screen: {
     alignItems: 'center',
-    // flex: 1,
+    flex: 1,
     paddingBottom: 20,
   },
   title: {
@@ -572,12 +592,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   blueButton: {
-    backgroundColor: 'rgba(6, 196, 217, 1)',
-    borderRadius: 6,
     width: '90%',
-    alignItems: 'center',
+    height: 55,
     justifyContent: 'center',
-    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(6,196,217,1)',
+    borderRadius: 8,
+    marginTop: 20,
+    marginBottom: 40,
   },
   buttonText: {
     fontSize: 18,
