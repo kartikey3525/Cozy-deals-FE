@@ -1,17 +1,16 @@
-import React, {useContext} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import React, {useContext} from 'react';
 import {ThemeContext} from '../context/themeContext';
 
-import HomeScreen from '../screens/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import {Dimensions, Image} from 'react-native';
 import FloatingButton from '../components/FloatingButton';
-import NotificationScreen from '../screens/NotificationScreen';
-import CategoryScreen from '../screens/CategoryScreen';
-import {Dimensions, Image, View} from 'react-native';
 import {AuthContext} from '../context/authcontext';
-import Preferences from '../screens/Preferences';
+import CategoryScreen from '../screens/CategoryScreen';
+import HomeScreen from '../screens/HomeScreen';
+import NotificationScreen from '../screens/NotificationScreen';
 import PostHistory from '../screens/PostHistory';
-import SellerProfile from '../screens/SellerProfile';
+import Preferences from '../screens/Preferences';
+import ProfileScreen from '../screens/ProfileScreen';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
 const Tab = createBottomTabNavigator();
@@ -34,7 +33,7 @@ const BottomTabs = () => {
         },
         tabBarStyle: {
           position: 'absolute',
-          height: '8%',
+          height: '7%',
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           backgroundColor: isDark ? '#000' : '#ffffff',
@@ -98,16 +97,16 @@ const BottomTabs = () => {
         />
       )}
 
-        <Tab.Screen
-          name="AddButton"
-          component={EmptyComponent} // ✅ No inline function
-          options={{
-            tabBarStyle: {
-              backgroundColor: 'transparent',
-            },
-            tabBarButton: () => <FloatingButton />, // ✅ Custom tab button remains
-          }}
-        />
+      <Tab.Screen
+        name="AddButton"
+        component={EmptyComponent} // ✅ No inline function
+        options={{
+          tabBarStyle: {
+            backgroundColor: 'transparent',
+          },
+          tabBarButton: () => <FloatingButton />, // ✅ Custom tab button remains
+        }}
+      />
 
       {userRole === 'buyer' ? (
         <Tab.Screen
@@ -157,7 +156,7 @@ const BottomTabs = () => {
                   ? require('../assets/profile-active.png')
                   : require('../assets/profile.png')
               }
-              style={{width: 24, height: 24}}
+              style={{width: 24.5, height: 24}}
             />
           ),
         })}

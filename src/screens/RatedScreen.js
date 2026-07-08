@@ -1,29 +1,29 @@
+import {Rating} from '@kolking/react-native-rating';
+import React, {useContext, useEffect} from 'react';
 import {
-  View,
-  Text,
+  ActivityIndicator,
   Image,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
+  View,
 } from 'react-native';
-import React, {useContext, useEffect} from 'react';
 import {HelperText} from 'react-native-paper';
 import Entypo from 'react-native-vector-icons/Entypo';
-import {Rating} from '@kolking/react-native-rating';
 
 import {useState} from 'react';
 import {AuthContext} from '../context/authcontext';
 
+import {useIsFocused} from '@react-navigation/native';
 import {Dimensions} from 'react-native';
+import Header from '../components/Header';
+import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
+import {ThemeContext} from '../context/themeContext';
+import useImagePicker from '../hooks/useImagePicker';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
-import {ThemeContext} from '../context/themeContext';
-import Header from '../components/Header';
-import useImagePicker from '../hooks/useImagePicker';
-import {useIsFocused} from '@react-navigation/native';
-import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
 
 export default function RatedScreen({navigation, route}) {
   const [isLoading, setIsLoading] = useState(false);
@@ -41,9 +41,10 @@ export default function RatedScreen({navigation, route}) {
   });
   const {handleRegister, handleLogin, PostRating} = useContext(AuthContext);
 
-  const {media, selectMedia, isUploading, setMedia} =
-  useImagePicker();
-  {isUploading && <ActivityIndicator size="large" color="#0000ff" />}
+  const {media, selectMedia, isUploading, setMedia} = useImagePicker();
+  {
+    isUploading && <ActivityIndicator size="large" color="#0000ff" />;
+  }
 
   useEffect(() => {
     // console.log('route?.params?.item', route?.params?.item);
@@ -96,9 +97,14 @@ export default function RatedScreen({navigation, route}) {
     <KeyboardAvoidingContainer>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.screen,
-          {backgroundColor: isDark ? '#000' : '#fff'},
+          {
+            backgroundColor: isDark ? '#000' : '#fff',
+            flexGrow: 1,
+            paddingBottom: 40,
+          },
         ]}>
         <Header header={'Rated review'} />
 
@@ -251,12 +257,10 @@ export default function RatedScreen({navigation, route}) {
         </Text>
 
         <View>
-          <View style={{
-            
-                  marginBottom: route.params.item.feedback ? '30%' : 0,
-
-
-          }}>
+          <View
+            style={{
+              marginBottom: route.params.item.feedback ? '30%' : 0,
+            }}>
             {media.length > 0 && media[0] ? (
               <>
                 <Image
@@ -395,22 +399,24 @@ export default function RatedScreen({navigation, route}) {
           </>
         )}
 
-       {!route.params.item.feedback ?( <TouchableOpacity
-          style={[styles.blueBotton, {margin: '15%', marginBottom: '20%'}]}
-          // onPress={() => navigation.navigate('shopdetails')}
-          onPress={() => handlePress()}>
-          <Text
-            style={[
-              styles.smallText,
-              {
-                color: '#fff',
-                fontSize: 22,
-                marginBottom: 0,
-              },
-            ]}>
-            Submit review
-          </Text>
-        </TouchableOpacity>):null}
+        {!route.params.item.feedback ? (
+          <TouchableOpacity
+            style={styles.blueBotton}
+            // onPress={() => navigation.navigate('shopdetails')}
+            onPress={() => handlePress()}>
+            <Text
+              style={[
+                styles.smallText,
+                {
+                  color: '#fff',
+                  fontSize: 22,
+                  marginBottom: 0,
+                },
+              ]}>
+              Submit review
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </KeyboardAvoidingContainer>
   );
@@ -418,7 +424,7 @@ export default function RatedScreen({navigation, route}) {
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     width: '100%',
   },
@@ -450,15 +456,15 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     flexDirection: 'row',
-    marginLeft: '6%',
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 10,
+    flexWrap: 'wrap',
+    width: '90%',
+    alignSelf: 'center',
+    paddingBottom: 20,
   },
   mediaItem: {
-    width: '20%', // Slight margin for spacing
-    margin: '2%',
-    aspectRatio: 1, // Keeps items square
+    width: 70,
+    height: 70,
+    margin: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -519,8 +525,9 @@ const styles = StyleSheet.create({
     width: '90%',
     height: 56,
     borderRadius: 10,
-    margin: '30%',
-    marginBottom: 20,
+    marginTop: 25,
+    marginBottom: 40,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
   },

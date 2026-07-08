@@ -1,24 +1,23 @@
-import React, {useContext, useEffect, useState, memo} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useIsFocused} from '@react-navigation/native';
+import React, {memo, useContext, useEffect, useState} from 'react';
 import {
-  View,
+  BackHandler,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  FlatList,
   TouchableOpacity,
-  Image,
-  ScrollView,
-  Pressable,
-  Modal,
-  BackHandler,
-  ToastAndroid,
+  View,
 } from 'react-native';
-import {useIsFocused} from '@react-navigation/native';
-import {ThemeContext} from '../context/themeContext';
-import {AuthContext} from '../context/authcontext';
-import {Dimensions} from 'react-native';
 import SearchBar from '../components/SearchBar';
+import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
 import LocationPermission from '../hooks/uselocation';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
@@ -75,7 +74,7 @@ const ProductItemHorizontal = memo(({item, onPress, isDark}) => (
     style={{
       justifyContent: 'center',
       paddingLeft: 4,
-      marginBottom: 15,
+      // marginBottom: 10,
       alignItems: 'center',
     }}
     onPress={onPress}>
@@ -102,7 +101,7 @@ const ProductItemVertical = memo(({item, onPress, isDark}) => (
   <Pressable
     style={{
       justifyContent: 'center',
-      marginBottom: 15,
+      marginBottom: 30,
       marginLeft: 10,
       alignItems: 'center',
     }}
@@ -165,7 +164,7 @@ const SellerProductItem = memo(({item, onPress, isDark}) => (
   <TouchableOpacity
     style={{
       justifyContent: 'flex-start',
-      marginBottom: 15,
+      marginBottom: 30,
       alignItems: 'center',
       width: Width * 0.5,
     }}
@@ -283,8 +282,14 @@ export default function HomeScreen({navigation}) {
       onPress={() =>
         userRole === 'buyer'
           ? item.id === 12
-            ? navigation.navigate('Categories', {item, selectedcategory: item.name,})
-            : navigation.navigate('Subcategory', {item: item.subCategories, selectedcategory: item.name,})
+            ? navigation.navigate('Categories', {
+                item,
+                selectedcategory: item.name,
+              })
+            : navigation.navigate('Subcategory', {
+                item: item.subCategories,
+                selectedcategory: item.name,
+              })
           : navigation.navigate('preferences', {item, category: item.name})
       }
     />
@@ -318,18 +323,19 @@ export default function HomeScreen({navigation}) {
     <View style={[styles.container, darkModeStyles.container]}>
       <LocationPermission setLocation={setLocation} />
       <View
-        style={{ 
+        style={{
+          flex: 1,
           width: '100%',
-          justifyContent: 'center',
-          height: Height * 0.9,
+          justifyContent: 'flex-start',
           alignItems: 'center',
+          paddingTop: 10,
         }}>
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'flex-start',
-            marginBottom: 5, 
+            marginBottom: 5,
           }}>
           <Pressable onPress={() => navigation.navigate('Profilescreen')}>
             <Image
@@ -477,7 +483,8 @@ export default function HomeScreen({navigation}) {
         {userRole === 'buyer' ? (
           <ScrollView
             showsVerticalScrollIndicator={false}
-            style={{height: Height * 0.69, flexGrow: 1}}>
+            contentContainerStyle={{paddingBottom: 35}}
+            style={{width: '100%', flex: 1}}>
             <FlatList
               style={{width: Width, left: '2%', alignSelf: 'center'}}
               key={flatListKey}
@@ -507,7 +514,11 @@ export default function HomeScreen({navigation}) {
             </Text>
             <View style={{width: Width * 0.97, marginLeft: 14}}>
               <FlatList
-                style={{marginTop: '2%'}}
+                style={{marginTop: 8}}
+                contentContainerStyle={{
+                  paddingBottom: 10,
+                  paddingRight: 10,
+                }}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
                 data={filteredLists[0] ?? []}
@@ -531,7 +542,11 @@ export default function HomeScreen({navigation}) {
             </Text>
             <View style={{width: Width * 0.97, marginLeft: 14}}>
               <FlatList
-                style={{marginTop: '2%'}}
+                style={{marginTop: 8}}
+                contentContainerStyle={{
+                  paddingBottom: 10,
+                  paddingRight: 10,
+                }}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
                 data={filteredLists[1] ?? []}
@@ -543,7 +558,8 @@ export default function HomeScreen({navigation}) {
         ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}
-            style={{height: '75%', flexGrow: 1}}>
+            contentContainerStyle={{paddingBottom: 35}}
+            style={{width: '100%', flex: 1}}>
             <FlatList
               style={{width: Width, left: '2.5%', alignSelf: 'center'}}
               key={flatListKey}

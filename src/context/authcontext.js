@@ -1,5 +1,11 @@
-import {createContext, useState, useEffect} from 'react';
+import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
+import messaging from '@react-native-firebase/messaging';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
+import axios from 'axios';
+import {createContext, useEffect, useState} from 'react';
 import {
   Alert,
   AppState,
@@ -7,15 +13,9 @@ import {
   PermissionsAndroid,
   Platform,
 } from 'react-native';
-import axios from 'axios';
-import messaging from '@react-native-firebase/messaging';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth from '@react-native-firebase/auth';
 import io from 'socket.io-client';
-import notifee, {EventType, AndroidImportance} from '@notifee/react-native';
-const API_URL = 'http://10.0.2.2:8080';
-// const API_URL = 'https://service.kartikengitech.info';
+// const API_URL = 'http://10.0.2.2:8080';
+const API_URL = 'https://cozy-deals-be-production.up.railway.app';
 
 const AuthContext = createContext();
 
@@ -349,6 +349,12 @@ const AuthProvider = ({children}) => {
         routes: [{name: 'BottomTabs'}],
       });
     } catch (error) {
+      console.log(
+        'LOGIN ERROR:',
+        JSON.stringify(error.response?.data, null, 2),
+      );
+      console.log('STATUS:', error.response?.status);
+
       handleApiError(error, 'Invalid credentials.');
     } finally {
       setIsLoading(prev => ({...prev, login: false}));
@@ -1276,4 +1282,4 @@ const AuthProvider = ({children}) => {
   );
 };
 
-export {AuthProvider, AuthContext};
+export {AuthContext, AuthProvider};

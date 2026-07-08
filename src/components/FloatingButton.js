@@ -1,9 +1,9 @@
-import React, {useContext, useState} from 'react';
+import {useNavigation} from '@react-navigation/native';
+import React, {useContext} from 'react';
 import {StyleSheet, TouchableOpacity} from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import {useNavigation} from '@react-navigation/native';
-import {ThemeContext} from '../context/themeContext';
 import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
 
 const FloatingButton = ({}) => {
   const {theme} = useContext(ThemeContext);
@@ -13,7 +13,7 @@ const FloatingButton = ({}) => {
 
   const handlePress = () => {
     // setisposting(true);
-    navigation.navigate(userRole==='buyer'?'postdetails':'AddProducts');
+    navigation.navigate(userRole === 'buyer' ? 'postdetails' : 'AddProducts');
   };
 
   return (
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     position: 'absolute',
-    bottom: '55%',
+    bottom: '30%',
     alignSelf: 'center',
     width: 55,
     height: 55,

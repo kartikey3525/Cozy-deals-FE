@@ -12,8 +12,6 @@ import {
   View,
 } from 'react-native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import Entypo from 'react-native-vector-icons/Entypo';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Octicons from 'react-native-vector-icons/Octicons';
 import {ThemeContext} from '../context/themeContext';
@@ -22,7 +20,6 @@ import * as scale from 'd3-scale';
 import {Dimensions} from 'react-native';
 import {G, Rect} from 'react-native-svg';
 import {BarChart, Grid, YAxis} from 'react-native-svg-charts';
-import {SceneMap, TabBar, TabView} from 'react-native-tab-view';
 import Header from '../components/Header';
 import HorizontalRatingButtons from '../components/HorizontalRating';
 import RatingTest from '../components/RatingTest';
@@ -84,7 +81,7 @@ export default function ShopDetails({navigation, route}) {
 
   useEffect(() => {
     if (userId) {
-      console.log('userId', route?.params?.item);
+      // console.log('userId', route?.params?.item);
       if (
         !route?.params?.item?.categoriesPost ||
         route?.params?.item?.categoriesPost.length === 0
@@ -183,17 +180,15 @@ export default function ShopDetails({navigation, route}) {
         {children}
       </Text>
     );
-    const Subtitle = ({children, numberOfLines = 3}) => (
-      <Text style={styles.subtitle} numberOfLines={numberOfLines}>
-        {children}
-      </Text>
+    const Subtitle = ({children}) => (
+      <Text style={styles.subtitle}>{children}</Text>
     );
     const sections = [
       {title: 'Address', value: Data?.businessAddress},
       {title: 'Contact', value: Data?.phone},
       {title: 'Email', value: Data?.email},
       {
-        title: 'Business Statutory Details',
+        title: 'Business Statutory Details :',
         isHeader: true,
         style: {marginTop: 10, marginBottom: 5, fontSize: 18},
       },
@@ -234,396 +229,80 @@ export default function ShopDetails({navigation, route}) {
     setShowDetails(prev => !prev);
   };
 
+  const CustomTabHeader = () => {
+    return (
+      <View
+        style={{
+          marginTop: 20,
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
+          borderColor: 'rgba(0,0,0,0.1)',
+          backgroundColor: isDark ? '#000' : '#fff',
+          flexDirection: 'row',
+        }}>
+        {routes.map((item, i) => {
+          const active = index === i;
+
+          return (
+            <TouchableOpacity
+              key={item.key}
+              activeOpacity={0.8}
+              onPress={() => setIndex(i)}
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingVertical: 14,
+                borderBottomWidth: active ? 3 : 0,
+                borderBottomColor: isDark ? '#fff' : '#000',
+              }}>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: '700',
+                  color: active ? (isDark ? '#fff' : '#000') : '#888',
+                }}>
+                {item.title}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
   // Calculate dynamic heights for each tab
-  const [tabHeights, setTabHeights] = useState({
-    overview: 0,
-    category: 0,
-    review: 0,
-    photos: 0,
-  });
-
-  const updateTabHeight = (key, height) => {
-    setTabHeights(prev => {
-      if (prev[key] === height) return prev;
-
-      return {
-        ...prev,
-        [key]: height,
-      };
-    });
-  };
-
-  const getDynamicTabHeight = () => {
-    const categories =
-      route?.params?.item?.categoriesPost?.length > 0
-        ? route.params.item.categoriesPost
-        : singleShop?.categoriesPost || [];
-    const ratings = sortedRatings || [];
-    const photos =
-      route?.params?.item?.profile?.length > 0
-        ? route.params.item.profile
-        : singleShop?.profile || [];
-
-    switch (index) {
-      case 0: // Overview
-        let overviewHeight = 320; // Reduced base height for static elements
-        if (showDetails) {
-          overviewHeight += 250; // Reduced height for BusinessDetails
-        }
-        overviewHeight += categories.length * 130; // Categories (120px height + 10px margin)
-        overviewHeight += ratings.length * 100; // Ratings (100px height + 0px margin)
-        overviewHeight += Math.min(Math.ceil(photos.length / 3) * 130, 300); // Photos capped at 300px
-        return overviewHeight;
-      case 1: // Category
-        return 150 + categories.length * 30; // Reduced base height + categories
-      case 2: // Review
-        return 400 + ratings.length * 100; // Reduced base height + ratings
-      case 3: // Photos
-        return 150 + Math.min(Math.ceil(photos.length / 3) * 140, 400); // Base height + capped photos
-      default:
-        return 400; // Reduced fallback
-    }
-  };
 
   const Overview = () => (
-    <View
-      onLayout={e => updateTabHeight('overview', e.nativeEvent.layout.height)}>
+    <View>
       <View style={{flexGrow: 1}}>
-        <TouchableOpacity
-          onPress={toggleDetails}
-          style={{flexDirection: 'row', alignItems: 'center'}}>
+        <View
+          // onPress={toggleDetails}
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 10,
+          }}>
           <Text
             style={[
               styles.title,
               {
+                left: 5,
                 color: isDark ? 'white' : 'black',
                 fontSize: 18,
               },
             ]}>
-            Quick information
+            Quick information :
           </Text>
-          <Entypo
-            name={showDetails ? 'chevron-thin-up' : 'chevron-thin-down'}
-            size={13}
-            color={isDark ? 'rgb(255, 255, 255)' : 'rgba(94, 95, 96, 1)'}
-            style={{marginLeft: 35, marginTop: 10}}
-          />
-        </TouchableOpacity>
+        </View>
         {showDetails && <BusinessDetails isDark={isDark} Data={Data} />}
-        <Text
-          style={[
-            {
-              alignSelf: 'flex-start',
-              fontSize: 18,
-              color: isDark ? 'white' : 'black',
-              left: 25,
-              fontWeight: 'bold',
-              marginTop: 5,
-              marginBottom: 0,
-            },
-          ]}>
-          Product categories
-        </Text>
-        <View style={{width: '95%', marginLeft: 14}}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{marginTop: '2%', padding: 5}}>
-            {route?.params?.item?.categoriesPost?.length > 0 ? (
-              route.params.item.categoriesPost.map((item, index) => (
-                <View key={item.id ?? `category-${index}`}>
-                  {renderRectangleList(item, index)}
-                </View>
-              ))
-            ) : Array.isArray(singleShop?.categoriesPost) &&
-              singleShop.categoriesPost.length > 0 ? (
-              singleShop.categoriesPost.map((item, index) => (
-                <View key={item.id ?? `category-${index}`}>
-                  {renderRectangleList(item, index)}
-                </View>
-              ))
-            ) : (
-              <Text>No categories available</Text>
-            )}
-          </ScrollView>
-        </View>
-        <TouchableOpacity
-          style={styles.blueBotton}
-          onPress={() =>
-            navigation.navigate('productcategories', {
-              item:
-                route?.params?.item?.categoriesPost?.length > 0
-                  ? route?.params?.item?.categoriesPost
-                  : singleShop?.categoriesPost,
-            })
-          }>
-          <Text
-            style={[
-              styles.smallText,
-              {color: '#fff', fontSize: 20, marginBottom: 0},
-            ]}>
-            Categories
-          </Text>
-        </TouchableOpacity>
-        <Text
-          style={[
-            styles.bigText,
-            {
-              alignSelf: 'flex-start',
-              fontSize: 18,
-              left: 25,
-              color: isDark ? 'white' : 'black',
-              marginTop: 5,
-              marginBottom: 0,
-            },
-          ]}>
-          Rating review
-        </Text>
-        <View style={{flexDirection: 'row', marginLeft: 25}}>
-          {shopRating?.result?.length > 0 ? (
-            <View
-              style={{
-                flexDirection: 'row',
-                height: 200,
-                alignSelf: 'flex-start',
-                width: Width * 0.7,
-              }}>
-              <YAxis
-                data={data}
-                yAccessor={({index}) => index}
-                scale={scale.scaleLinear} // Use scaleLinear instead of scaleBand
-                contentInset={{top: 10, bottom: 13}}
-                numberOfTicks={data.length} // Match number of bars
-                formatLabel={(_, index) => data[index]?.label || ''} // Display rating labels
-                svg={{
-                  fill: isDark ? 'white' : 'black',
-                  fontSize: 14,
-                  fontWeight: 'bold',
-                }}
-              />
-              <BarChart
-                style={{flex: 1, marginLeft: 8}}
-                data={data}
-                horizontal={true}
-                svg={{fill: 'rgba(255, 180, 0, 1)'}}
-                contentInset={{top: 10, bottom: 13}}
-                spacingInner={0.2} // Adjust spacing between bars
-                spacingOuter={0.1}
-                gridMin={0}>
-                <Grid direction={Grid.Direction.VERTICAL} />
-                <G>
-                  {data.map((item, index) => {
-                    // Calculate and validate width
-                    const barWidth =
-                      Number.isFinite(item.value) && maxValue > 0
-                        ? Math.max(0, (item.value / maxValue) * 100)
-                        : 0;
-                    // Constrain rx and ry
-                    const barHeight = 10;
-                    const rx = Math.min(4, barWidth / 2);
-                    const ry = Math.min(4, barHeight / 2);
-
-                    return (
-                      <Rect
-                        key={index}
-                        x={0}
-                        y={(index * (200 - 20)) / data.length + 10} // Dynamic Y positioning
-                        width={barWidth}
-                        height={barHeight}
-                        rx={rx}
-                        ry={ry}
-                        fill="rgba(255, 180, 0, 1)"
-                      />
-                    );
-                  })}
-                </G>
-              </BarChart>
-            </View>
-          ) : (
-            <Text
-              style={[
-                styles.smallText,
-                {color: isDark ? 'white' : 'black', alignSelf: 'center'},
-              ]}>
-              No enough data to show Ratings Graph
-            </Text>
-          )}
-          <View style={{marginTop: '10%'}}>
-            <View style={{flexDirection: 'row'}}>
-              <Text
-                style={[
-                  styles.bigText,
-                  {
-                    alignSelf: 'flex-start',
-                    fontSize: 14,
-                    color: isDark ? 'white' : 'black',
-                    marginTop: 5,
-                    marginBottom: 0,
-                  },
-                ]}>
-                {Data.averageRating}
-              </Text>
-              <Octicons
-                name="star-fill"
-                size={15}
-                color={'rgba(255, 219, 17, 1)'}
-                style={{marginTop: 8, marginLeft: 5, alignSelf: 'center'}}
-              />
-            </View>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.bigText,
-                {
-                  alignSelf: 'flex-start',
-                  fontSize: 12,
-                  color: 'grey',
-                  marginTop: 10,
-                  marginBottom: 0,
-                },
-              ]}>
-              {sortedRatings?.length} Reviews
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.bigText,
-                {
-                  alignSelf: 'flex-start',
-                  fontSize: 12,
-                  color: 'grey',
-                  marginTop: 10,
-                  marginBottom: 0,
-                },
-              ]}>
-              {Data.averageRating <= 4 ? 'Average' : 'Recommended'}
-            </Text>
-          </View>
-        </View>
-        <Text
-          style={[
-            styles.bigText,
-            {
-              alignSelf: 'flex-start',
-              fontSize: 14,
-              marginTop: 10,
-              marginLeft: 25,
-              marginBottom: 0,
-              color: isDark ? 'white' : 'black',
-            },
-          ]}>
-          Recent rating review
-        </Text>
-        <HorizontalRatingButtons ratings={dynamicRatings} />
-        <TouchableOpacity
-          style={styles.blueBotton}
-          onPress={() =>
-            navigation.navigate('ratedscreen', {
-              item:
-                route?.params?.item?.profile?.length > 0
-                  ? route?.params?.item
-                  : singleShop,
-            })
-          }>
-          <Text
-            style={[
-              styles.smallText,
-              {color: '#fff', fontSize: 20, marginBottom: 0},
-            ]}>
-            Write a review
-          </Text>
-        </TouchableOpacity>
-        {sortedRatings?.length > 0 ? (
-          <View style={[styles.ratingsContainer, {marginTop: '2%'}]}>
-            {/* <ScrollView showsVerticalScrollIndicator={false}> */}
-            {sortedRatings?.length > 0 ? (
-              sortedRatings.map((item, index) => (
-                <View key={item?.id || index}>
-                  {render2RectangleList(item, index)}
-                </View>
-              ))
-            ) : (
-              <Text
-                style={[
-                  styles.smallText,
-                  {
-                    color: isDark ? 'white' : 'black',
-                    alignSelf: 'center',
-                    paddingVertical: 20,
-                  },
-                ]}>
-                No Ratings Available
-              </Text>
-            )}
-            {/* </ScrollView> */}
-          </View>
-        ) : (
-          <Text
-            style={[
-              styles.smallText,
-              {color: isDark ? 'white' : 'black', alignSelf: 'center'},
-            ]}>
-            No Ratings Available
-          </Text>
-        )}
-        <Text
-          style={[
-            styles.bigText,
-            {
-              alignSelf: 'flex-start',
-              fontSize: 18,
-              color: isDark ? 'white' : 'black',
-              left: 25,
-              marginTop: 5,
-              marginBottom: 0,
-            },
-          ]}>
-          Photos
-        </Text>
-        <View style={{width: '95%', marginLeft: 10}}>
-          <View style={{marginTop: '2%', padding: 5}}>
-            <View>
-              {Array.from(
-                {
-                  length: Math.ceil(
-                    (route?.params?.item?.profile?.length > 0
-                      ? route?.params?.item?.profile
-                      : singleShop?.profile || []
-                    ).length / 3,
-                  ),
-                },
-                (_, rowIndex) => (
-                  <View
-                    key={rowIndex}
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    {(route?.params?.item?.profile?.length > 0
-                      ? route?.params?.item?.profile
-                      : singleShop?.profile || []
-                    )
-                      .slice(rowIndex * 3, rowIndex * 3 + 3)
-                      .map((item, index) => (
-                        <View
-                          key={item.id || `photo-${index}`}
-                          style={{flex: 1, margin: 5}}>
-                          {renderPhotosList(item, index)}
-                        </View>
-                      ))}
-                  </View>
-                ),
-              )}
-            </View>
-          </View>
-        </View>
       </View>
     </View>
   );
 
   const Category = () => (
-    <View
-      onLayout={e => updateTabHeight('category', e.nativeEvent.layout.height)}>
+    <View>
       <Text
         style={[
           styles.bigText,
@@ -677,8 +356,7 @@ export default function ShopDetails({navigation, route}) {
   );
 
   const Review = () => (
-    <View
-      onLayout={e => updateTabHeight('review', e.nativeEvent.layout.height)}>
+    <View>
       <View style={{flexGrow: 1}}>
         <Text
           style={[
@@ -876,8 +554,7 @@ export default function ShopDetails({navigation, route}) {
   );
 
   const Photos = () => (
-    <View
-      onLayout={e => updateTabHeight('photos', e.nativeEvent.layout.height)}>
+    <View>
       <Text
         style={[
           styles.bigText,
@@ -894,7 +571,7 @@ export default function ShopDetails({navigation, route}) {
       </Text>
       <View style={{width: '95%', marginLeft: 10}}>
         <View style={{marginTop: '2%', padding: 5}}>
-        <View>
+          <View>
             {Array.from(
               {
                 length: Math.ceil(
@@ -931,13 +608,6 @@ export default function ShopDetails({navigation, route}) {
       </View>
     </View>
   );
-
-  const renderScene = SceneMap({
-    overview: Overview,
-    category: Category,
-    review: Review,
-    photos: Photos,
-  });
 
   const renderRectangleList = (item, index) => {
     return (
@@ -1154,7 +824,15 @@ export default function ShopDetails({navigation, route}) {
   return (
     <View style={{flex: 1}}>
       <ScrollView
-        style={[styles.container, {backgroundColor: isDark ? '#000' : '#fff'}]}
+        style={[
+          styles.container,
+          {
+            backgroundColor: isDark ? '#000' : '#fff',
+          },
+        ]}
+        contentContainerStyle={{
+          paddingBottom: 120,
+        }}
         showsVerticalScrollIndicator={false}>
         <View
           style={{
@@ -1369,7 +1047,7 @@ export default function ShopDetails({navigation, route}) {
                 color="rgba(255, 255, 255, 1)"
               />
             </Pressable>
-            <Pressable
+            {/* <Pressable
               style={[
                 styles.iconStyle,
                 {backgroundColor: 'rgba(33, 150, 243, 1)'},
@@ -1380,53 +1058,18 @@ export default function ShopDetails({navigation, route}) {
                 size={26}
                 color="rgba(255, 255, 255, 1)"
               />
-            </Pressable>
+            </Pressable> */}
           </View>
-          <View
-            style={[
-              styles.tabContainer,
-              {
-                height:
-                  index === 0
-                    ? Math.max(tabHeights.overview, 500)
-                    : index === 1
-                    ? Math.max(tabHeights.category, 500)
-                    : index === 2
-                    ? Math.max(tabHeights.review, 500)
-                    : Math.max(tabHeights.photos, 500),
-              },
-            ]}>
-            <TabView
-              swipeEnabled={false}
-              navigationState={{index, routes}}
-              renderScene={renderScene}
-              onIndexChange={setIndex}
-              initialLayout={{width: Width}}
-              renderTabBar={props => (
-                <TabBar
-                  {...props}
-                  indicatorStyle={{backgroundColor: isDark ? 'white' : 'black'}}
-                  style={{
-                    backgroundColor: isDark ? 'black' : 'white',
-                    borderTopWidth: 1,
-                    borderBottomWidth: 1,
-                    borderColor: isDark
-                      ? 'rgba(0, 0, 0, 0.1)'
-                      : 'rgba(0, 0, 0, 0.1)',
-                  }}
-                  labelStyle={{
-                    fontWeight: 'bold',
-                    color: isDark ? 'white' : 'black',
-                    textTransform: 'none',
-                  }}
-                  activeColor={isDark ? 'white' : 'black'}
-                  inactiveColor="grey"
-                  pressColor={
-                    isDark ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                  }
-                />
-              )}
-            />
+          <View style={styles.tabContainer}>
+            <CustomTabHeader />
+
+            {index === 0 && <Overview />}
+
+            {index === 1 && <Category />}
+
+            {index === 2 && <Review />}
+
+            {index === 3 && <Photos />}
           </View>
         </View>
       </ScrollView>
@@ -1632,7 +1275,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     fontSize: 14,
     fontWeight: 'bold',
-    left: 25,
+    left: 20,
     marginTop: 5,
     marginBottom: 0,
   },
@@ -1640,9 +1283,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     fontSize: 12,
     color: 'grey',
-    left: 25,
-    width: '80%',
-    marginTop: 5,
-    marginBottom: 0,
+    left: 20,
+    width: Width - 50,
+    marginTop: 3,
+    marginBottom: 6,
   },
 });

@@ -1,20 +1,20 @@
 import React, {useContext, useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Image,
   Dimensions,
+  Image,
   Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import Entypo from 'react-native-vector-icons/Entypo';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {ThemeContext} from '../context/themeContext';
 import Header from '../components/Header';
-import RNShare from 'react-native-share';
+import {ThemeContext} from '../context/themeContext';
+// import RNShare from 'react-native-share';
+import Share from 'react-native-share';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
 
@@ -75,55 +75,42 @@ export default function ReferandEarn({navigation}) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  const shareApp = async () => {
+  const APP_LINK = 'https://play.google.com/store/apps/details?id=com.yourapp';
+
+  const SHARE_MESSAGE = `🚀 Check out this amazing app!
+
+Download now:
+
+${APP_LINK}`;
+
+  const shareOnWhatsApp = async () => {
     try {
-      const result = await Share.share({
-        message: 'Check out this awesome app! Download it now: https://yourapp.com',
+      await Share.shareSingle({
+        social: Share.Social.WHATSAPP,
+        message: SHARE_MESSAGE,
       });
-  
-      if (result.action === Share.sharedAction) {
-        console.log('Shared successfully');
-      } else if (result.action === Share.dismissedAction) {
-        console.log('Share dismissed');
-      }
-    } catch (error) {
-      console.log(error.message);
+    } catch (e) {
+      console.log(e);
     }
   };
 
-  const shareOnWhatsApp = async () => {
-    const url = 'https://yourapp.com'; // Your app URL
-    const message = `Check out this awesome app! ${url}`;
-    
-    const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
-    Linking.openURL(whatsappUrl).catch(() => alert('WhatsApp not installed!'));
+  const shareOnFacebook = async () => {
+    shareMore();
   };
 
-  const shareOnFacebook = async () => {
-    const url = 'https://yourapp.com';
-    
-    const facebookUrl = `fb://facewebmodal/f?href=${encodeURIComponent(url)}`;
-    Linking.openURL(facebookUrl).catch(() => alert('Facebook app not installed!'));
-  };
-  
   const shareOnInstagram = async () => {
-    const url = 'https://yourapp.com';
-    
-    const instagramUrl = `instagram://share?text=${encodeURIComponent(url)}`;
-    Linking.openURL(instagramUrl).catch(() => alert('Instagram app not installed!'));
+    shareMore();
   };
-  
-  const shareWithRNShare = async () => {
-    const options = {
-      title: 'Check out this app!',
-      message: 'Download this awesome app now: https://yourapp.com',
-      url: 'https://yourapp.com',
-    };
-  
+
+  const shareMore = async () => {
     try {
-      await RNShare.open(options);
-    } catch (error) {
-      console.log(error);
+      await Share.open({
+        title: 'Invite Friends',
+        message: SHARE_MESSAGE,
+        url: APP_LINK,
+      });
+    } catch (e) {
+      console.log(e);
     }
   };
 
@@ -248,9 +235,8 @@ export default function ReferandEarn({navigation}) {
           style={[
             styles.iconStyle,
             {backgroundColor: isDark ? '#121212' : '#fff'},
-          ]} 
-          onPress={() =>shareOnWhatsApp()}
-          >
+          ]}
+          onPress={shareOnWhatsApp}>
           <Image
             source={require('../assets/whatsapp.png')}
             style={{
@@ -266,9 +252,7 @@ export default function ReferandEarn({navigation}) {
             styles.iconStyle,
             {backgroundColor: isDark ? '#121212' : '#fff'},
           ]}
-          onPress={() =>shareOnWhatsApp()}
-          
-          >
+          onPress={shareOnFacebook}>
           <Image
             source={require('../assets/fb.png')}
             style={{
@@ -283,10 +267,8 @@ export default function ReferandEarn({navigation}) {
           style={[
             styles.iconStyle,
             {backgroundColor: isDark ? '#121212' : '#fff'},
-          ]} 
-          
-          onPress={() =>shareOnWhatsApp()}
-          >
+          ]}
+          onPress={shareOnInstagram}>
           <Image
             source={require('../assets/Instagram.png')}
             style={{
@@ -301,7 +283,8 @@ export default function ReferandEarn({navigation}) {
           style={[
             styles.iconStyle,
             {backgroundColor: isDark ? '#121212' : '#fff'},
-          ]}>
+          ]}
+          onPress={shareMore}>
           <Image
             source={
               isDark

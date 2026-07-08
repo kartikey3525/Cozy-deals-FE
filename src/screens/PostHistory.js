@@ -1,30 +1,29 @@
 import React, {useContext, useEffect, useState} from 'react';
 import {
-  View,
-  StyleSheet,
-  Text,
-  FlatList,
-  TouchableOpacity,
   Image,
   Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import Entypo from 'react-native-vector-icons/Entypo';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {ThemeContext} from '../context/themeContext';
 
 import {Dimensions} from 'react-native';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
 
-import {ScrollView} from 'react-native-gesture-handler';
 import {useIsFocused} from '@react-navigation/native';
+import {ScrollView} from 'react-native-gesture-handler';
 import {AuthContext} from '../context/authcontext';
 
 export default function PostHistory({navigation}) {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
-  const {getPostsHistory, PostsHistory,deletePost} = useContext(AuthContext);
+  const {getPostsHistory, PostsHistory, deletePost} = useContext(AuthContext);
 
   useEffect(() => {
     getPostsHistory();
@@ -54,7 +53,7 @@ export default function PostHistory({navigation}) {
     }
   };
 
-  const deleteItem = (id) => {
+  const deleteItem = id => {
     console.log(`Delete item with ID: ${id}`);
     deletePost(id);
     getPostsHistory();
@@ -62,38 +61,57 @@ export default function PostHistory({navigation}) {
     // 1. Removing from local state
     // 2. Calling an API to delete from the database
   };
-  
-  const formatDate = (dateString) => {
+
+  const formatDate = dateString => {
     const date = new Date(dateString);
-    
+
     // Get day with ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
     const day = date.getDate();
     let dayWithSuffix;
     if (day > 3 && day < 21) dayWithSuffix = day + 'th'; // covers 4th-20th
     else {
       switch (day % 10) {
-        case 1:  dayWithSuffix = day + 'st'; break;
-        case 2:  dayWithSuffix = day + 'nd'; break;
-        case 3:  dayWithSuffix = day + 'rd'; break;
-        default: dayWithSuffix = day + 'th';
+        case 1:
+          dayWithSuffix = day + 'st';
+          break;
+        case 2:
+          dayWithSuffix = day + 'nd';
+          break;
+        case 3:
+          dayWithSuffix = day + 'rd';
+          break;
+        default:
+          dayWithSuffix = day + 'th';
       }
     }
-    
+
     // Month names
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     const month = months[date.getMonth()];
-    
+
     // Year
     const year = date.getFullYear();
-    
+
     // Time in 12-hour format with AM/PM
     let hours = date.getHours();
     const ampm = hours >= 12 ? 'pm' : 'am';
     hours = hours % 12;
     hours = hours ? hours : 12; // the hour '0' should be '12'
     const minutes = date.getMinutes().toString().padStart(2, '0');
-    
+
     return `${dayWithSuffix} ${month} ${year}, ${hours}:${minutes}${ampm}`;
   };
 
@@ -109,10 +127,9 @@ export default function PostHistory({navigation}) {
         onPress={() => {
           console.log('🚀 Navigating :', item);
           navigation.navigate('postdetails', {
-            item: item, 
+            item: item,
           });
-        }}
-      >
+        }}>
         <View
           style={[
             styles.rectangle2,
@@ -150,7 +167,7 @@ export default function PostHistory({navigation}) {
                   width: Width * 0.45,
                 },
               ]}>
-              {item.productName||'No name'}
+              {item.productName || 'No name'}
             </Text>
 
             <View
@@ -187,64 +204,65 @@ export default function PostHistory({navigation}) {
           />
         </View>
         {selectedItemId === item._id && (
-      <>
-      {/* Overlay */}
-      <Pressable
-        style={styles.overlay}
-        onPress={() => setSelectedItemId(null)}
-      />
-      
-      {/* Modal content */}
-      <Pressable
-        style={[
-          styles.modalContentContainer,
-          {top: index * 10 + 15, right: 26},
-        ]}
-        onPress={() => {}} // Empty handler to prevent clicks from bubbling to overlay
-      >
-        <View style={[
-          styles.modalContent,
-          {backgroundColor: isDark ? '#121212' : 'white'},
-        ]}>
-              <TouchableOpacity
-                style={{
-                  padding: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginLeft: 20,
-                }}
-                onPress={() => deleteItem(item._id)}>
-                <Ionicons
-                  name={'trash-outline'}
-                  size={16}
-                  color={isDark ? '#fff' : 'rgba(94, 95, 96, 1)'}
-                />
-                <Text
-                  style={[
-                    styles.bigText,
-                    {
-                      fontSize: 16,
-                      marginLeft: 5,
-                      fontWeight: '500',
-                      color: isDark ? '#fff' : 'rgba(94, 95, 96, 1)',
-                    },
-                  ]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
+          <>
+            {/* Overlay */}
+            <Pressable
+              style={styles.overlay}
+              onPress={() => setSelectedItemId(null)}
+            />
 
+            {/* Modal content */}
+            <Pressable
+              style={[
+                styles.modalContentContainer,
+                {top: index * 10 + 15, right: 26},
+              ]}
+              onPress={() => {}} // Empty handler to prevent clicks from bubbling to overlay
+            >
               <View
-                style={{
-                  height: 1,
-                  backgroundColor: 'lightgrey',
-                  width: 150,
-                  alignSelf: 'center',
-                  borderRadius: 10,
-                }}
-              />
-            </View>
-          </Pressable>
-        </>
+                style={[
+                  styles.modalContent,
+                  {backgroundColor: isDark ? '#121212' : 'white'},
+                ]}>
+                <TouchableOpacity
+                  style={{
+                    padding: 4,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginLeft: 20,
+                  }}
+                  onPress={() => deleteItem(item._id)}>
+                  <Ionicons
+                    name={'trash-outline'}
+                    size={16}
+                    color={isDark ? '#fff' : 'rgba(94, 95, 96, 1)'}
+                  />
+                  <Text
+                    style={[
+                      styles.bigText,
+                      {
+                        fontSize: 16,
+                        marginLeft: 5,
+                        fontWeight: '500',
+                        color: isDark ? '#fff' : 'rgba(94, 95, 96, 1)',
+                      },
+                    ]}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    height: 1,
+                    backgroundColor: 'lightgrey',
+                    width: 150,
+                    alignSelf: 'center',
+                    borderRadius: 10,
+                  }}
+                />
+              </View>
+            </Pressable>
+          </>
         )}
       </Pressable>
     );
@@ -294,7 +312,9 @@ export default function PostHistory({navigation}) {
           style={{height: Height * 0.8, flexGrow: 1}}>
           <View style={{marginTop: '2%', padding: 5}}>
             {PostsHistory.map((item, index) => (
-              <View key={item.id ?? `post-${index}`}>{render2RectangleList({item, index})}</View>
+              <View key={item.id ?? `post-${index}`}>
+                {render2RectangleList({item, index})}
+              </View>
             ))}
           </View>
         </ScrollView>
@@ -317,11 +337,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     // backgroundColor: 'rgba(0, 0, 0, 0.5)',
     zIndex: 1,
-  }, 
+  },
   modalContentContainer: {
     position: 'absolute',
     zIndex: 1,
-  }, 
+  },
   blueBotton: {
     backgroundColor: '#00AEEF',
     width: '100%',
