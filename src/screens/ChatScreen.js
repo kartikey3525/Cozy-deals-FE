@@ -1,34 +1,31 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  Text,
+  Dimensions,
   FlatList,
   Image,
+  Modal,
   StyleSheet,
-  Pressable,
-  Modal, // Added for image modal
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import io from 'socket.io-client';
-import { launchImageLibrary } from 'react-native-image-picker';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import Feather from 'react-native-vector-icons/Feather';
+import {launchImageLibrary} from 'react-native-image-picker';
 import Entypo from 'react-native-vector-icons/Entypo';
-import Octicons from 'react-native-vector-icons/Octicons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Dimensions } from 'react-native';
-import { ThemeContext } from '../context/themeContext';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
-import { AuthContext } from '../context/authcontext';
+import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
 
 const Width = Dimensions.get('window').width;
 
-const ChatScreen = ({ navigation, route }) => {
-  const { theme } = useContext(ThemeContext);
+const ChatScreen = ({navigation, route}) => {
+  const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
-  const { apiURL, userdata } = useContext(AuthContext);
-  const { item } = route.params;
+
+  const {apiURL, userdata, socket} = useContext(AuthContext);
+  const {item} = route.params;
   const userId = userdata._id;
   const recipientId = item._id;
   const userToken = userdata.token;
@@ -37,8 +34,6 @@ const ChatScreen = ({ navigation, route }) => {
   const [text, setText] = useState('');
   const [image, setImage] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
-  const [socket, setSocket] = useState(null);
-  const [socketReady, setSocketReady] = useState(false);
   const [pendingMessages, setPendingMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
@@ -57,116 +52,110 @@ const ChatScreen = ({ navigation, route }) => {
     setImageModalVisible(true);
   };
 
-  useEffect(() => {
-    if (socket && socket.connected && recipientId) {
-      initializeChat(socket);
-    }
-  }, [socket, recipientId]);
+  const [socketReady, setSocketReady] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(`${apiURL}/chat`, {
-      transports: ['websocket'],
-      extraHeaders: { token: userToken },
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 3000,
-    });
+    if (!socket) return;
 
-    newSocket.on('connect', () => {
-      console.log(`[${new Date().toISOString()}] ✅ Socket connected! ID: ${newSocket.id}`);
-      setSocket(newSocket);
+    console.log('📡 Registering chat socket listeners...');
+
+    const handleConnect = () => {
+      console.log('✅ Socket Connected:', socket.id);
       setSocketReady(true);
-      if (!chatId && recipientId) {
-        initializeChat(newSocket);
-      } else {
-        console.log('ℹ️ Chat already initialized or recipientId missing');
-        processPendingMessages();
-      }
-    });
 
-    newSocket.on('connect_error', error => {
-      console.error(`[${new Date().toISOString()}] 🚨 Socket connection error:`, error.message, error.stack);
+      initializeChat();
+    };
+
+    const handleDisconnect = reason => {
+      console.log('❌ Socket Disconnected:', reason);
       setSocketReady(false);
-    });
+    };
 
-    newSocket.on('disconnect', reason => {
-      console.log(`[${new Date().toISOString()}] 🔌 Socket disconnected. Reason:`, reason);
+    const handleConnectError = err => {
+      console.log('🚨 Socket Connect Error:', err.message);
       setSocketReady(false);
-    });
+    };
 
-    newSocket.on('newMessage', newMessage => {
-      console.log('📩 New message received:', newMessage);
-      setMessages(prevMessages => [...prevMessages, newMessage]);
-    });
+    const handleOpenChat = response => {
+      console.log('📩 OPEN CHAT:', JSON.stringify(response, null, 2));
 
-    newSocket.on('isTyping', ({ userId: typingUserId }) => {
-      if (typingUserId !== userId) {
-        setOtherUserTyping(true);
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => setOtherUserTyping(false), 2000);
+      if (response?.data?._id) {
+        console.log('✅ Chat created/opened:', response.data._id);
+
+        setChatId(response.data._id);
       }
-    });
 
-    newSocket.on('userStoppedTyping', ({ userId: typingUserId }) => {
-      if (typingUserId !== userId) setOtherUserTyping(false);
-    });
+      if (Array.isArray(response?.msgData)) {
+        setMessages(response.msgData);
+      }
+    };
+
+    const handleReceiveMessage = response => {
+      console.log('📨 RECEIVE MESSAGE:', JSON.stringify(response, null, 2));
+
+      if (!response) return;
+
+      const message = response.data || response;
+
+      setMessages(prev => {
+        const exists = prev.some(m => {
+          if (message._id && m._id) {
+            return String(m._id) === String(message._id);
+          }
+
+          return (
+            m.senderId === message.senderId &&
+            m.msg === message.msg &&
+            m.date === message.date
+          );
+        });
+
+        if (exists) {
+          console.log('⚠️ Duplicate message ignored');
+          return prev;
+        }
+
+        console.log('✅ Appending new message');
+
+        return [...prev, message];
+      });
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('openChat', handleOpenChat);
+    socket.on('receiveMsg', handleReceiveMessage);
+
+    if (socket.connected) {
+      handleConnect();
+    }
 
     return () => {
-      newSocket.disconnect();
-      newSocket.off('newMessage');
-      newSocket.off('isTyping');
-      newSocket.off('userStoppedTyping');
-      clearTimeout(typingTimeoutRef.current);
+      console.log('🧹 Removing socket listeners...');
+
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('openChat', handleOpenChat);
+      socket.off('receiveMsg', handleReceiveMessage);
     };
-  }, [apiURL, userToken, userId]);
+  }, [socket]);
 
-  const initializeChat = socket => {
-    if (!socket || !socket.connected) {
-      console.error('❌ Cannot emit createChat. Socket is disconnected!');
-      return;
-    }
+  useEffect(() => {
+    if (!chatId) return;
 
-    console.log(
-      `🔹 Emitting createChat for users: Sender=${userId}, Recipient=${recipientId}`,
-    );
-    socket.emit('createChat', { userId: recipientId, userToken }, response => {
-      console.log(
-        '📩 createChat response:',
-        JSON.stringify(response[0], null, 2),
-      );
-      if (response?.data?._id) {
-        setChatId(response.data._id);
-        console.log('✅ Chat ID set:', response.data._id);
-      } else {
-        console.error('❌ No chatId in response:', response);
-      }
-      if (response?.msgData?.length) {
-        console.log('📜 Messages received:', response.msgData);
-        setMessages(response.msgData);
-      } else {
-        console.log('ℹ️ No messages in response');
-        setMessages([]);
-      }
-    });
+    console.log('📨 Chat ready, processing pending messages...');
 
-    socket.once('openChat', response => {
-      console.log(
-        '📩 openChat response:',
-        JSON.stringify(response[0], null, 2),
-      );
-      if (response?.data?._id) {
-        setChatId(response.data._id);
-        console.log('✅ Chat ID set from openChat:', response.data);
-      } else {
-        console.error('❌ No chatId in openChat response:', response);
-      }
-      if (response?.msgData?.length) {
-        console.log('📜 Messages received from openChat:', response.msgData);
-        setMessages(response.msgData);
-      } else {
-        console.log('ℹ️ No messages in openChat response');
-        setMessages([]);
-      }
+    processPendingMessages();
+  }, [chatId]);
+  const initializeChat = () => {
+    if (!socket?.connected) return;
+
+    console.log('📤 Creating Chat');
+
+    socket.emit('createChat', {
+      userId: recipientId,
     });
   };
 
@@ -184,7 +173,7 @@ const ChatScreen = ({ navigation, route }) => {
 
   const pickImage = () => {
     try {
-      launchImageLibrary({ mediaType: 'photo' }, response => {
+      launchImageLibrary({mediaType: 'photo'}, response => {
         if (!response.didCancel && response.assets) {
           const selectedImage = response.assets[0].uri;
           setImage(selectedImage);
@@ -203,7 +192,7 @@ const ChatScreen = ({ navigation, route }) => {
         msgText,
         imageUrl,
       });
-      setPendingMessages(prev => [...prev, { msgText, imageUrl }]);
+      setPendingMessages(prev => [...prev, {msgText, imageUrl}]);
       return;
     }
 
@@ -213,13 +202,13 @@ const ChatScreen = ({ navigation, route }) => {
         msgText,
         imageUrl,
       });
-      setPendingMessages(prev => [...prev, { msgText, imageUrl }]);
+      setPendingMessages(prev => [...prev, {msgText, imageUrl}]);
       return;
     }
 
     if (!chatId) {
       console.warn('⏳ Waiting for chatId...');
-      setPendingMessages(prev => [...prev, { msgText, imageUrl }]);
+      setPendingMessages(prev => [...prev, {msgText, imageUrl}]);
       return;
     }
 
@@ -234,7 +223,7 @@ const ChatScreen = ({ navigation, route }) => {
         uploadedImageUrl = await uploadImage(imageUrl);
         if (!uploadedImageUrl) {
           console.error('❌ Image upload failed');
-          setPendingMessages(prev => [...prev, { msgText, imageUrl }]);
+          setPendingMessages(prev => [...prev, {msgText, imageUrl}]);
           return;
         }
       }
@@ -244,36 +233,22 @@ const ChatScreen = ({ navigation, route }) => {
         msg: msgText.trim(),
         msgType: uploadedImageUrl || imageUrl ? 'image' : 'text',
         thumbnail: uploadedImageUrl || imageUrl || '',
-        userToken,
       };
       console.log(
         '📤 Emitting sendMsg:',
-        JSON.stringify(messagePayload[0], null, 2),
+        JSON.stringify(messagePayload, null, 2),
       );
 
-      socket.emit('sendMsg', messagePayload, response => {
-        console.log(
-          '✅ Server Response:',
-          JSON.stringify(response[0], null, 2),
-        );
-        if (response?.error) {
-          console.error('❌ Message send failed:', response.error);
-          setPendingMessages(prev => [...prev, { msgText, imageUrl }]);
-          return;
-        }
-        if (!response?.savedMessage?._id) {
-          console.error('❌ Invalid server response:', response);
-          return;
-        }
-        setMessages(prev => [...prev, response.savedMessage]);
-      });
+      socket.emit('sendMsg', messagePayload);
+
+      console.log('Message sent');
 
       setText('');
       setImage(null);
       setIsTyping(false);
     } catch (error) {
       console.error('🚨 Error in sendMessage:', error.message);
-      setPendingMessages(prev => [...prev, { msgText, imageUrl }]);
+      setPendingMessages(prev => [...prev, {msgText, imageUrl}]);
     }
   };
 
@@ -293,7 +268,7 @@ const ChatScreen = ({ navigation, route }) => {
     const messagesToSend = [...pendingMessages];
     setPendingMessages([]);
 
-    for (const { msgText, imageUrl } of messagesToSend) {
+    for (const {msgText, imageUrl} of messagesToSend) {
       await sendMessage(msgText, imageUrl);
     }
   };
@@ -334,10 +309,13 @@ const ChatScreen = ({ navigation, route }) => {
     if (!socket || !socket.connected) return;
     if (text.length > 0 && !isTyping) {
       setIsTyping(true);
-      socket.emit('typing', { chatId, userId, userToken });
+      socket.emit('isTyping', {chatId, userId});
     } else if (text.length === 0 && isTyping) {
       setIsTyping(false);
-      socket.emit('stopTyping', { chatId, userId, userToken });
+      socket.emit('isTyping', {
+        chatId,
+        isTyping: false,
+      });
     }
   };
 
@@ -351,18 +329,18 @@ const ChatScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (messages.length > 0 && flatListRef.current) {
       console.log('🔄 Scrolling to end with', messages.length, 'messages');
-      flatListRef.current.scrollToEnd({ animated: true });
+      flatListRef.current.scrollToEnd({animated: true});
     }
   }, [messages]);
 
   const sortedMessages = [...messages].sort(
-    (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    (a, b) => new Date(a.date) - new Date(b.date),
   );
 
   useEffect(() => {
     if (flatListRef.current && sortedMessages.length > 0) {
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
+        flatListRef.current?.scrollToEnd({animated: true});
       }, 100);
     }
   }, [sortedMessages]);
@@ -386,7 +364,7 @@ const ChatScreen = ({ navigation, route }) => {
   return (
     <KeyboardAvoidingContainer>
       <View
-        style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
+        style={[styles.container, {backgroundColor: isDark ? '#000' : '#fff'}]}>
         <View
           style={[
             styles.rectangle2,
@@ -403,7 +381,7 @@ const ChatScreen = ({ navigation, route }) => {
             color={isDark ? '#fff' : 'rgba(94, 95, 96, 1)'}
           />
           <Image
-            source={{ uri: item.profile[0] }}
+            source={{uri: item.profile[0]}}
             style={{
               width: 50,
               height: 50,
@@ -413,7 +391,7 @@ const ChatScreen = ({ navigation, route }) => {
             }}
             resizeMode="contain"
           />
-          <View style={{ flex: 1 }}>
+          <View style={{flex: 1}}>
             <Text
               numberOfLines={1}
               style={[
@@ -565,14 +543,14 @@ const ChatScreen = ({ navigation, route }) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.messagesContainer}
           onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: true })
+            flatListRef.current?.scrollToEnd({animated: true})
           }
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => flatListRef.current?.scrollToEnd({animated: true})}
           data={sortedMessages}
           keyExtractor={item =>
             item._id?.toString() || `${Math.random()}-${Date.now()}`
           }
-          renderItem={({ item }) => {
+          renderItem={({item}) => {
             console.log('🔍 Rendering message:', JSON.stringify(item, null, 2));
             const isSentByUser = String(item.senderId) === String(userId);
             const read = isMessageRead(item);
@@ -600,9 +578,10 @@ const ChatScreen = ({ navigation, route }) => {
                     </Text>
                   )}
                   {item.thumbnail && (
-                    <TouchableOpacity onPress={() => openImageModal(item.thumbnail)}>
+                    <TouchableOpacity
+                      onPress={() => openImageModal(item.thumbnail)}>
                       <Image
-                        source={{ uri: item.thumbnail }}
+                        source={{uri: item.thumbnail}}
                         style={styles.image}
                       />
                     </TouchableOpacity>
@@ -649,11 +628,11 @@ const ChatScreen = ({ navigation, route }) => {
             <View
               style={[
                 styles.imageModalContainer,
-                { backgroundColor: isDark ? '#121212' : '#fff' },
+                {backgroundColor: isDark ? '#121212' : '#fff'},
               ]}>
               {selectedImage && (
                 <Image
-                  source={{ uri: selectedImage }}
+                  source={{uri: selectedImage}}
                   style={styles.fullImage}
                   resizeMode="contain"
                 />
@@ -674,10 +653,10 @@ const ChatScreen = ({ navigation, route }) => {
         <View
           style={[
             styles.inputContainer,
-            { backgroundColor: isDark ? '#000' : '#fff' },
+            {backgroundColor: isDark ? '#000' : '#fff'},
           ]}>
           <TextInput
-            style={[styles.input, { color: isDark ? '#fff' : '#000' }]}
+            style={[styles.input, {color: isDark ? '#fff' : '#000'}]}
             value={text}
             onChangeText={handleTyping}
             placeholder="Type a message..."
@@ -693,12 +672,7 @@ const ChatScreen = ({ navigation, route }) => {
           <TouchableOpacity
             onPress={() => sendMessage(text)}
             style={styles.iconButton}>
-            <Ionicons
-              name={'send'}
-              size={18}
-              color="#fff"
-              style={{ left: 2 }}
-            />
+            <Ionicons name={'send'} size={18} color="#fff" style={{left: 2}} />
           </TouchableOpacity>
         </View>
       </View>
@@ -707,7 +681,7 @@ const ChatScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10 },
+  container: {flex: 1, padding: 10},
   rectangle2: {
     backgroundColor: '#fff',
     width: Width * 0.95,
@@ -737,13 +711,13 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     maxWidth: '80%',
   },
-  sentMessage: { backgroundColor: '#06C4D9' },
-  receivedMessage: { backgroundColor: '#E0E0E0' },
-  message: { fontSize: 16, color: '#000' },
-  sendermessage: { fontSize: 16, color: '#fff' },
-  image: { width: 150, height: 150, borderRadius: 10 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', padding: 10 },
-  input: { flex: 1, fontSize: 16, padding: 10, borderRadius: 10 },
+  sentMessage: {backgroundColor: '#06C4D9'},
+  receivedMessage: {backgroundColor: '#E0E0E0'},
+  message: {fontSize: 16, color: '#000'},
+  sendermessage: {fontSize: 16, color: '#fff'},
+  image: {width: 150, height: 150, borderRadius: 10},
+  inputContainer: {flexDirection: 'row', alignItems: 'center', padding: 10},
+  input: {flex: 1, fontSize: 16, padding: 10, borderRadius: 10},
   iconButton: {
     padding: 9,
     backgroundColor: '#06C4D9',
@@ -756,7 +730,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginLeft: 5,
   },
-  doubleTick: { marginLeft: -8 },
+  doubleTick: {marginLeft: -8},
   recListText: {},
   bigText: {},
   timeText: {

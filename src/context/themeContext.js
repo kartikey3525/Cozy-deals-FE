@@ -1,4 +1,4 @@
-import React, {createContext, useState, useEffect} from 'react';
+import React, {createContext, useContext, useEffect, useState} from 'react';
 import {Appearance} from 'react-native';
 
 export const ThemeContext = createContext();
@@ -8,7 +8,7 @@ export const ThemeProvider = ({children}) => {
 
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({colorScheme}) => {
-      setTheme(colorScheme); // Always update the theme instantly when system theme changes
+      setTheme(colorScheme || 'light');
     });
 
     return () => subscription.remove();
@@ -16,17 +16,26 @@ export const ThemeProvider = ({children}) => {
 
   const changeTheme = selectedTheme => {
     if (selectedTheme === 'SystemDefault') {
-      setTheme(Appearance.getColorScheme()); // Sync with system theme
+      setTheme(Appearance.getColorScheme() || 'light');
     } else {
       setTheme(selectedTheme.toLowerCase());
     }
   };
 
+  const isDark = theme === 'dark';
+
   return (
-    <ThemeContext.Provider value={{theme, changeTheme}}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        isDark,
+        changeTheme,
+      }}>
       {children}
     </ThemeContext.Provider>
   );
 };
+
+export const useTheme = () => useContext(ThemeContext);
 
 export default ThemeContext;
