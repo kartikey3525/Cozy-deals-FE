@@ -42,6 +42,13 @@ const ChatScreen = ({navigation, route}) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const typingTimeoutRef = useRef(null);
   const flatListRef = useRef(null);
+  const chatInitialized = useRef(false);
+  const localMessageId = useRef(0);
+
+  const generateLocalId = () => {
+    localMessageId.current += 1;
+    return `local_${Date.now()}_${localMessageId.current}`;
+  };
 
   const toggleModal = id =>
     setSelectedItemId(selectedItemId === id ? null : id);
@@ -66,8 +73,17 @@ const ChatScreen = ({navigation, route}) => {
       initializeChat();
     };
 
+    const handleTypingStatus = response => {
+      console.log('⌨️ Typing:', response);
+
+      setOtherUserTyping(!!response?.isTyping);
+    };
+
     const handleDisconnect = reason => {
       console.log('❌ Socket Disconnected:', reason);
+
+      chatInitialized.current = false;
+
       setSocketReady(false);
     };
 
@@ -80,9 +96,17 @@ const ChatScreen = ({navigation, route}) => {
       console.log('📩 OPEN CHAT:', JSON.stringify(response, null, 2));
 
       if (response?.data?._id) {
-        console.log('✅ Chat created/opened:', response.data._id);
+        const newChatId = response.data._id;
 
-        setChatId(response.data._id);
+        console.log('✅ Chat created/opened:', newChatId);
+
+        setChatId(newChatId);
+
+        console.log('📥 Opening chat room:', newChatId);
+
+        socket.emit('openChat', {
+          id: newChatId,
+        });
       }
 
       if (Array.isArray(response?.msgData)) {
@@ -93,31 +117,42 @@ const ChatScreen = ({navigation, route}) => {
     const handleReceiveMessage = response => {
       console.log('📨 RECEIVE MESSAGE:', JSON.stringify(response, null, 2));
 
-      if (!response) return;
-
       const message = response.data || response;
 
+      if (!message) return;
+
       setMessages(prev => {
-        const exists = prev.some(m => {
-          if (message._id && m._id) {
-            return String(m._id) === String(message._id);
-          }
-
-          return (
-            m.senderId === message.senderId &&
+        const optimisticIndex = prev.findIndex(
+          m =>
+            !m._id &&
+            m.status === 'sending' &&
+            String(getMessageSenderId(m)) ===
+              String(getMessageSenderId(message)) &&
             m.msg === message.msg &&
-            m.date === message.date
-          );
-        });
+            m.msgType === message.msgType,
+        );
 
-        if (exists) {
-          console.log('⚠️ Duplicate message ignored');
-          return prev;
+        if (optimisticIndex !== -1) {
+          const updated = [...prev];
+
+          updated[optimisticIndex] = {
+            ...message,
+            status: 'delivered',
+          };
+          console.log('✅ Replaced optimistic message');
+
+          return updated;
         }
 
-        console.log('✅ Appending new message');
+        const exists = prev.some(
+          m =>
+            (m._id && message._id && String(m._id) === String(message._id)) ||
+            (m.localId && m.localId === message.localId),
+        );
 
-        return [...prev, message];
+        if (exists) return prev;
+
+        return [...prev, {...message, status: 'sent'}];
       });
     };
 
@@ -126,6 +161,7 @@ const ChatScreen = ({navigation, route}) => {
     socket.on('connect_error', handleConnectError);
     socket.on('openChat', handleOpenChat);
     socket.on('receiveMsg', handleReceiveMessage);
+    socket.on('isTyping', handleTypingStatus);
 
     if (socket.connected) {
       handleConnect();
@@ -139,6 +175,8 @@ const ChatScreen = ({navigation, route}) => {
       socket.off('connect_error', handleConnectError);
       socket.off('openChat', handleOpenChat);
       socket.off('receiveMsg', handleReceiveMessage);
+      socket.off('isTyping', handleTypingStatus);
+      clearTimeout(typingTimeoutRef.current);
     };
   }, [socket]);
 
@@ -151,6 +189,13 @@ const ChatScreen = ({navigation, route}) => {
   }, [chatId]);
   const initializeChat = () => {
     if (!socket?.connected) return;
+
+    if (chatInitialized.current) {
+      console.log('⚠️ Chat already initialized');
+      return;
+    }
+
+    chatInitialized.current = true;
 
     console.log('📤 Creating Chat');
 
@@ -228,14 +273,33 @@ const ChatScreen = ({navigation, route}) => {
         }
       }
 
-      const messagePayload = {
-        chatId,
+      const localId = generateLocalId();
+
+      const optimisticMessage = {
+        localId,
+        senderId: userId,
         msg: msgText.trim(),
         msgType: uploadedImageUrl || imageUrl ? 'image' : 'text',
         thumbnail: uploadedImageUrl || imageUrl || '',
+        date: new Date().toISOString(),
+
+        status: 'sending',
+
+        readBy: [],
       };
+
+      setMessages(prev => [...prev, optimisticMessage]);
+
+      const messagePayload = {
+        chatId,
+        msg: optimisticMessage.msg,
+        msgType: optimisticMessage.msgType,
+        thumbnail: optimisticMessage.thumbnail,
+        localId,
+      };
+
       console.log(
-        '📤 Emitting sendMsg:',
+        '📤 Sending message',
         JSON.stringify(messagePayload, null, 2),
       );
 
@@ -248,6 +312,8 @@ const ChatScreen = ({navigation, route}) => {
       setIsTyping(false);
     } catch (error) {
       console.error('🚨 Error in sendMessage:', error.message);
+      updateMessageStatus(localId, 'failed');
+
       setPendingMessages(prev => [...prev, {msgText, imageUrl}]);
     }
   };
@@ -271,6 +337,21 @@ const ChatScreen = ({navigation, route}) => {
     for (const {msgText, imageUrl} of messagesToSend) {
       await sendMessage(msgText, imageUrl);
     }
+  };
+
+  const updateMessageStatus = (id, status) => {
+    setMessages(prev =>
+      prev.map(msg => {
+        if (msg.localId === id || msg._id === id) {
+          return {
+            ...msg,
+            status,
+          };
+        }
+
+        return msg;
+      }),
+    );
   };
 
   const uploadImage = async uri => {
@@ -304,19 +385,30 @@ const ChatScreen = ({navigation, route}) => {
     }
   };
 
-  const handleTyping = text => {
-    setText(text);
-    if (!socket || !socket.connected) return;
-    if (text.length > 0 && !isTyping) {
+  const handleTyping = value => {
+    setText(value);
+
+    if (!socket || !socket.connected || !chatId) return;
+
+    if (!isTyping) {
       setIsTyping(true);
-      socket.emit('isTyping', {chatId, userId});
-    } else if (text.length === 0 && isTyping) {
+
+      socket.emit('isTyping', {
+        chatId,
+        isTyping: true,
+      });
+    }
+
+    clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
+
       socket.emit('isTyping', {
         chatId,
         isTyping: false,
       });
-    }
+    }, 1000);
   };
 
   const isMessageRead = message => {
@@ -333,17 +425,19 @@ const ChatScreen = ({navigation, route}) => {
     }
   }, [messages]);
 
-  const sortedMessages = [...messages].sort(
-    (a, b) => new Date(a.date) - new Date(b.date),
-  );
+  const sortedMessages = React.useMemo(() => {
+    return [...messages].sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [messages]);
 
-  useEffect(() => {
-    if (flatListRef.current && sortedMessages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({animated: true});
-      }, 100);
-    }
-  }, [sortedMessages]);
+  const getMessageSenderId = message => {
+    return (
+      message.senderId ||
+      message.sender?._id ||
+      message.sender ||
+      message.userId ||
+      null
+    );
+  };
 
   const formatMessageTime = dateString => {
     console.log('date', dateString);
@@ -537,23 +631,42 @@ const ChatScreen = ({navigation, route}) => {
             </Pressable>
           )} */}
         </View>
-
+        {otherUserTyping && (
+          <Text
+            style={{
+              color: '#06C4D9',
+              marginLeft: 15,
+              marginBottom: 5,
+              fontStyle: 'italic',
+            }}>
+            Typing...
+          </Text>
+        )}
         <FlatList
           ref={flatListRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.messagesContainer}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({animated: true})
-          }
-          onLayout={() => flatListRef.current?.scrollToEnd({animated: true})}
           data={sortedMessages}
           keyExtractor={item =>
-            item._id?.toString() || `${Math.random()}-${Date.now()}`
+            String(
+              item._id ||
+                item.localId ||
+                `${getMessageSenderId(item)}_${item.date}_${item.msgType}`,
+            )
           }
           renderItem={({item}) => {
-            console.log('🔍 Rendering message:', JSON.stringify(item, null, 2));
-            const isSentByUser = String(item.senderId) === String(userId);
+            // console.log('🔍 Rendering message:', JSON.stringify(item, null, 2));
+            const isSentByUser =
+              String(getMessageSenderId(item)) === String(userId);
             const read = isMessageRead(item);
+
+            const sending = item.status === 'sending';
+
+            const delivered = item.status === 'delivered';
+
+            const failed = item.status === 'failed';
+
+            const sent = item.status === 'sent';
 
             return (
               <View
@@ -598,18 +711,36 @@ const ChatScreen = ({navigation, route}) => {
                 </View>
                 {isSentByUser && (
                   <View style={styles.tickContainer}>
-                    {read ? (
+                    {failed ? (
+                      <MaterialIcons
+                        name="error-outline"
+                        color="red"
+                        size={14}
+                      />
+                    ) : sending ? (
+                      <Ionicons name="time-outline" color="#888" size={12} />
+                    ) : read ? (
                       <>
-                        <Ionicons name="checkmark" size={12} color="blue" />
+                        <Ionicons name="checkmark" size={12} color="#2196F3" />
                         <Ionicons
                           name="checkmark"
                           size={12}
-                          color="blue"
+                          color="#2196F3"
+                          style={styles.doubleTick}
+                        />
+                      </>
+                    ) : delivered ? (
+                      <>
+                        <Ionicons name="checkmark" size={12} color="#666" />
+                        <Ionicons
+                          name="checkmark"
+                          size={12}
+                          color="#666"
                           style={styles.doubleTick}
                         />
                       </>
                     ) : (
-                      <Ionicons name="checkmark" size={12} color="#888" />
+                      <Ionicons name="checkmark" size={12} color="#666" />
                     )}
                   </View>
                 )}

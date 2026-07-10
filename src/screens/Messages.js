@@ -88,7 +88,7 @@ const Messages = ({navigation}) => {
     }
 
     const handlechatList = response => {
-      console.log('📩 Received chatList:', JSON.stringify(response, null, 2));
+      // console.log('📩 Received chatList:', JSON.stringify(response, null, 2));
 
       setChatLoading(false);
       isFetchingRef.current = false;
@@ -140,13 +140,11 @@ const Messages = ({navigation}) => {
   }, [socket, fetchChatList]);
 
   useEffect(() => {
-    if (!isFocused || !socket) {
-      return;
-    }
+    if (!isFocused || !socket) return;
 
     console.log('🔄 Screen focused');
 
-    if (userRole === 'buyer') {
+    if (userdata?.role === 'buyer') {
       getFilteredPosts();
     } else {
       getBuyersList();
@@ -156,33 +154,35 @@ const Messages = ({navigation}) => {
 
     setChatLoading(false);
     setIsSearching(false);
-
-    // Only switch to chats if chats already exist.
-    if (chatListData.length > 0) {
-      setSearchAllUsers(false);
-    } else {
-      setSearchAllUsers(true);
-    }
   }, [isFocused]);
 
   useEffect(() => {
-    if (!isSearching) {
-      setFilteredLists(
-        searchAllUsers
-          ? userRole === 'buyer'
-            ? filteredPosts
-            : buyerList
-          : chatListData,
-      );
+    if (!isFocused) return;
+
+    if (chatListData.length > 0) {
+      console.log('✅ Existing chats found');
+
+      setSearchAllUsers(false);
+    } else {
+      console.log('👤 No chats yet');
+
+      setSearchAllUsers(true);
     }
-  }, [
-    searchAllUsers,
-    chatListData,
-    isSearching,
-    userRole,
-    filteredPosts,
-    buyerList,
-  ]);
+  }, [chatListData, isFocused]);
+
+  useEffect(() => {
+    if (!isFocused) return;
+
+    if (userdata?.role === 'buyer') {
+      getFilteredPosts();
+    }
+
+    if (userdata?.role === 'seller') {
+      getBuyersList();
+    }
+
+    fetchChatList();
+  }, [isFocused, userdata?.role, socket]);
 
   const preFetchChatId = useCallback(
     recipientId => {
@@ -394,12 +394,12 @@ const Messages = ({navigation}) => {
     [isDark, navigation, preFetchChatId],
   );
 
+  const availableUsers = userdata?.role === 'buyer' ? filteredPosts : buyerList;
+
   const listData = isSearching
     ? filteredLists
     : searchAllUsers
-    ? userRole === 'buyer'
-      ? filteredPosts
-      : buyerList
+    ? availableUsers
     : chatListData;
 
   const renderItem = searchAllUsers
@@ -416,7 +416,7 @@ const Messages = ({navigation}) => {
           placeholder="Search"
           lists={
             searchAllUsers
-              ? userRole === 'buyer'
+              ? userdata?.role === 'buyer'
                 ? filteredPosts
                 : buyerList
               : chatListData

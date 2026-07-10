@@ -104,7 +104,7 @@ const AuthProvider = ({children}) => {
   const [notificationList, setnotificationList] = useState([]);
   const [RatingLiked, setRatingLiked] = useState([]);
   const [FAQs, setFAQs] = useState([]);
-  const [userRole, setUserRole] = useState('buyer');
+  const [userRole, setUserRole] = useState(null);
   const [location, setLocation] = useState(null);
   const [isposting, setisposting] = useState(false);
 
@@ -627,7 +627,12 @@ const AuthProvider = ({children}) => {
       const response = await apiClient.get('/api/user/getAllProfile', {
         headers: getAuthHeaders(userdata?.token),
       });
-      const posts = response.data.data;
+      const posts = (response.data.data || []).filter(user => {
+        return (
+          (user.role === 'seller' || user.roleId === 1) &&
+          user._id !== userdata?._id
+        );
+      });
       if (distanceFilter === null && ratingFilter === null) {
         setfilteredPosts(posts);
         return;
@@ -1048,10 +1053,18 @@ const AuthProvider = ({children}) => {
 
   const getBuyersList = async () => {
     try {
-      const response = await apiClient.get('/api/user/getAllProfileBuyer', {
+      const response = await apiClient.get('/api/user/getAllProfile', {
         headers: getAuthHeaders(userdata?.token),
       });
-      setbuyerList(response.data.data);
+
+      const buyers = (response.data.data || []).filter(user => {
+        return (
+          (user.role === 'buyer' || user.roleId === 0) &&
+          user._id !== userdata?._id
+        );
+      });
+
+      setbuyerList(buyers);
     } catch (error) {
       handleApiError(error, 'Failed to load buyers list.');
     }
@@ -1127,10 +1140,19 @@ const AuthProvider = ({children}) => {
 
   const checkLoginStatus = async () => {
     try {
-      const [[, rememberMe], [, token]] = await AsyncStorage.multiGet([
+      const values = await AsyncStorage.multiGet([
         'rememberMe',
         'userToken',
+        'selectedUserRole',
       ]);
+
+      const rememberMe = values[0][1];
+      const token = values[1][1];
+      const savedRole = values[2][1];
+
+      if (savedRole) {
+        setUserRole(savedRole);
+      }
 
       if (!token) {
         return;
@@ -1142,6 +1164,15 @@ const AuthProvider = ({children}) => {
       });
 
       const latestUser = response.data.data;
+
+      const role =
+        latestUser.role === 'seller' || latestUser.roleId === 1
+          ? 'seller'
+          : 'buyer';
+
+      setUserRole(role);
+
+      await AsyncStorage.setItem('selectedUserRole', role);
 
       setUserfulldata(latestUser);
 

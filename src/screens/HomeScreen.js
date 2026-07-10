@@ -221,12 +221,21 @@ export default function HomeScreen({navigation}) {
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
-    if (isFocused) {
-      userRole === 'buyer' ? getCategories() : getSellerCategories();
-      userRole === 'buyer' ? (getRecentPosts(), getNearbyPosts()) : getPosts();
-      getNotification(); // Assuming this is available from your AuthContext
-      getUserData();
+    if (!isFocused || !userRole) {
+      return;
     }
+
+    if (userRole === 'buyer') {
+      getCategories();
+      getRecentPosts();
+      getNearbyPosts();
+    } else {
+      getSellerCategories();
+      getPosts();
+    }
+
+    getNotification();
+    getUserData();
   }, [isFocused, userRole]);
 
   useEffect(() => {
