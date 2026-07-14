@@ -108,6 +108,12 @@ const Messages = ({navigation}) => {
       }
     };
 
+    const handleChatUpdated = () => {
+      console.log('📩 chatUpdated');
+
+      fetchChatList();
+    };
+
     const handleConnect = () => {
       console.log('✅ Socket Connected');
 
@@ -130,12 +136,14 @@ const Messages = ({navigation}) => {
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('connect_error', handleConnectError);
+    socket.on('chatUpdated', handleChatUpdated);
 
     return () => {
       socket.off('chatList', handlechatList);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
+      socket.off('chatUpdated', handleChatUpdated);
     };
   }, [socket, fetchChatList]);
 
@@ -180,8 +188,6 @@ const Messages = ({navigation}) => {
     if (userdata?.role === 'seller') {
       getBuyersList();
     }
-
-    fetchChatList();
   }, [isFocused, userdata?.role, socket]);
 
   const preFetchChatId = useCallback(

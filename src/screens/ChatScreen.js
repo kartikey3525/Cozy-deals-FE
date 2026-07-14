@@ -33,33 +33,57 @@ const ChatScreen = ({navigation, route}) => {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [image, setImage] = useState(null);
-  const [selectedItemId, setSelectedItemId] = useState(null);
   const [pendingMessages, setPendingMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   // Added state for image modal
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const typingTimeoutRef = useRef(null);
+  const [socketReady, setSocketReady] = useState(false);
+  const [chatUser, setChatUser] = useState(item);
+
+  useEffect(() => {
+    socketReadyRef.current = socketReady;
+  }, [socketReady]);
+
+  useEffect(() => {
+    chatIdRef.current = chatId;
+  }, [chatId]);
+
+  useEffect(() => {
+    pendingQueueRef.current = pendingMessages;
+  }, [pendingMessages]);
+
   const flatListRef = useRef(null);
-  const chatInitialized = useRef(false);
-  const localMessageId = useRef(0);
 
-  const generateLocalId = () => {
-    localMessageId.current += 1;
-    return `local_${Date.now()}_${localMessageId.current}`;
+  const pendingQueueRef = useRef([]);
+
+  const chatIdRef = useRef(null);
+
+  const socketReadyRef = useRef(false);
+
+  const initializedRef = useRef(false);
+
+  const typingTimerRef = useRef(null);
+
+  const typingTimeoutRef = typingTimerRef;
+
+  const chatInitialized = initializedRef;
+  const messageCounter = useRef(0);
+
+  const generateClientMessageId = () => {
+    messageCounter.current += 1;
+
+    return `client_${Date.now()}_${messageCounter.current}_${Math.random()
+      .toString(36)
+      .substring(2, 8)}`;
   };
-
-  const toggleModal = id =>
-    setSelectedItemId(selectedItemId === id ? null : id);
 
   // Function to open image modal
   const openImageModal = imageUrl => {
     setSelectedImage(imageUrl);
     setImageModalVisible(true);
   };
-
-  const [socketReady, setSocketReady] = useState(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -74,87 +98,175 @@ const ChatScreen = ({navigation, route}) => {
     };
 
     const handleTypingStatus = response => {
-      console.log('⌨️ Typing:', response);
-
-      setOtherUserTyping(!!response?.isTyping);
+      setOtherUserTyping(!!response?.data?.isTyping);
     };
 
     const handleDisconnect = reason => {
       console.log('❌ Socket Disconnected:', reason);
 
-      chatInitialized.current = false;
+      initializedRef.current = false;
+
+      socketReadyRef.current = false;
 
       setSocketReady(false);
     };
 
     const handleConnectError = err => {
       console.log('🚨 Socket Connect Error:', err.message);
+
+      socketReadyRef.current = false;
+
       setSocketReady(false);
     };
 
     const handleOpenChat = response => {
-      console.log('📩 OPEN CHAT:', JSON.stringify(response, null, 2));
+      if (!response?.data?._id) return;
 
-      if (response?.data?._id) {
-        const newChatId = response.data._id;
+      const newChatId = response.data._id;
 
-        console.log('✅ Chat created/opened:', newChatId);
-
+      if (chatIdRef.current !== newChatId) {
+        chatIdRef.current = newChatId;
         setChatId(newChatId);
-
-        console.log('📥 Opening chat room:', newChatId);
-
-        socket.emit('openChat', {
-          id: newChatId,
-        });
       }
 
       if (Array.isArray(response?.msgData)) {
-        setMessages(response.msgData);
+        setMessages(previous => {
+          const merged = [...response.msgData];
+
+          previous.forEach(localMessage => {
+            const exists = merged.some(serverMessage => {
+              if (
+                localMessage.clientMessageId &&
+                serverMessage.clientMessageId
+              ) {
+                return (
+                  localMessage.clientMessageId === serverMessage.clientMessageId
+                );
+              }
+
+              return (
+                localMessage._id &&
+                serverMessage._id &&
+                String(localMessage._id) === String(serverMessage._id)
+              );
+            });
+
+            if (!exists && localMessage.status === 'sending') {
+              merged.push(localMessage);
+            }
+          });
+
+          return merged;
+        });
       }
     };
 
     const handleReceiveMessage = response => {
-      console.log('📨 RECEIVE MESSAGE:', JSON.stringify(response, null, 2));
-
       const message = response.data || response;
 
       if (!message) return;
 
-      setMessages(prev => {
-        const optimisticIndex = prev.findIndex(
-          m =>
-            !m._id &&
-            m.status === 'sending' &&
-            String(getMessageSenderId(m)) ===
-              String(getMessageSenderId(message)) &&
-            m.msg === message.msg &&
-            m.msgType === message.msgType,
-        );
+      setMessages(previousMessages => {
+        const updatedMessages = [...previousMessages];
 
-        if (optimisticIndex !== -1) {
-          const updated = [...prev];
+        const existingIndex = updatedMessages.findIndex(item => {
+          if (
+            item.clientMessageId &&
+            message.clientMessageId &&
+            item.clientMessageId === message.clientMessageId
+          ) {
+            return true;
+          }
 
-          updated[optimisticIndex] = {
+          if (
+            item._id &&
+            message._id &&
+            String(item._id) === String(message._id)
+          ) {
+            return true;
+          }
+
+          return false;
+        });
+
+        if (existingIndex >= 0) {
+          updatedMessages[existingIndex] = {
+            ...updatedMessages[existingIndex],
             ...message,
             status: 'delivered',
           };
-          console.log('✅ Replaced optimistic message');
 
-          return updated;
+          return updatedMessages;
         }
 
-        const exists = prev.some(
-          m =>
-            (m._id && message._id && String(m._id) === String(message._id)) ||
-            (m.localId && m.localId === message.localId),
-        );
+        const alreadyExists = updatedMessages.some(item => {
+          return (
+            item._id && message._id && String(item._id) === String(message._id)
+          );
+        });
 
-        if (exists) return prev;
+        if (alreadyExists) {
+          return updatedMessages;
+        }
 
-        return [...prev, {...message, status: 'sent'}];
+        updatedMessages.push({
+          ...message,
+          status: message.status || 'sent',
+        });
+
+        return updatedMessages;
       });
     };
+
+    const handleMessageRead = response => {
+      setMessages(previous =>
+        previous.map(message => {
+          if (String(message.senderId) === String(userId)) {
+            return {
+              ...message,
+              readBy: [
+                {
+                  status: 'read',
+                },
+              ],
+              status: 'read',
+            };
+          }
+
+          return message;
+        }),
+      );
+    };
+
+    const handleUserStatus = data => {
+      if (String(data.userId) === String(chatUser._id)) {
+        setChatUser(prev => ({
+          ...prev,
+          isOnline: data.isOnline,
+          lastSeen: data.lastSeen,
+        }));
+      }
+    };
+
+    const handleMessageDelivered = response => {
+      console.log('✅ Delivered', response);
+
+      updateMessageStatus(
+        response.clientMessageId,
+        response.status || 'delivered',
+      );
+    };
+
+    const handleChatUpdated = response => {
+      console.log('Chat Updated', response);
+    };
+
+    socket.off('connect', handleConnect);
+    socket.off('disconnect', handleDisconnect);
+    socket.off('connect_error', handleConnectError);
+    socket.off('openChat', handleOpenChat);
+    socket.off('receiveMsg', handleReceiveMessage);
+    socket.off('isTyping', handleTypingStatus);
 
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
@@ -162,8 +274,13 @@ const ChatScreen = ({navigation, route}) => {
     socket.on('openChat', handleOpenChat);
     socket.on('receiveMsg', handleReceiveMessage);
     socket.on('isTyping', handleTypingStatus);
+    socket.on('messageRead', handleMessageRead);
+    socket.on('userStatusChanged', handleUserStatus);
+    socket.on('messageDelivered', handleMessageDelivered);
 
-    if (socket.connected) {
+    socket.on('chatUpdated', handleChatUpdated);
+
+    if (socket.connected && !initializedRef.current) {
       handleConnect();
     }
 
@@ -176,9 +293,14 @@ const ChatScreen = ({navigation, route}) => {
       socket.off('openChat', handleOpenChat);
       socket.off('receiveMsg', handleReceiveMessage);
       socket.off('isTyping', handleTypingStatus);
+      socket.off('messageRead', handleMessageRead);
+      socket.off('userStatusChanged', handleUserStatus);
+      socket.off('messageDelivered', handleMessageDelivered);
+
+      socket.off('chatUpdated', handleChatUpdated);
       clearTimeout(typingTimeoutRef.current);
     };
-  }, [socket]);
+  }, [socket, chatUser._id, recipientId, userId]);
 
   useEffect(() => {
     if (!chatId) return;
@@ -191,7 +313,6 @@ const ChatScreen = ({navigation, route}) => {
     if (!socket?.connected) return;
 
     if (chatInitialized.current) {
-      console.log('⚠️ Chat already initialized');
       return;
     }
 
@@ -199,9 +320,15 @@ const ChatScreen = ({navigation, route}) => {
 
     console.log('📤 Creating Chat');
 
-    socket.emit('createChat', {
-      userId: recipientId,
-    });
+    socket.emit(
+      'createChat',
+      {
+        userId: recipientId,
+      },
+      response => {
+        console.log('createChat ACK', response);
+      },
+    );
   };
 
   const ensureSocketConnection = async () => {
@@ -261,6 +388,7 @@ const ChatScreen = ({navigation, route}) => {
       console.log('⚠️ Nothing to send');
       return;
     }
+    const clientMessageId = generateClientMessageId();
 
     try {
       let uploadedImageUrl = '';
@@ -273,29 +401,51 @@ const ChatScreen = ({navigation, route}) => {
         }
       }
 
-      const localId = generateLocalId();
+      const now = new Date().toISOString();
 
       const optimisticMessage = {
-        localId,
+        clientMessageId,
+        localId: clientMessageId,
+
         senderId: userId,
+
         msg: msgText.trim(),
+
         msgType: uploadedImageUrl || imageUrl ? 'image' : 'text',
+
         thumbnail: uploadedImageUrl || imageUrl || '',
-        date: new Date().toISOString(),
+
+        createdAt: now,
+
+        date: now,
 
         status: 'sending',
 
         readBy: [],
       };
 
-      setMessages(prev => [...prev, optimisticMessage]);
+      setMessages(prev => {
+        if (
+          prev.some(
+            m => m.clientMessageId === optimisticMessage.clientMessageId,
+          )
+        ) {
+          return prev;
+        }
+
+        return [...prev, optimisticMessage];
+      });
 
       const messagePayload = {
+        clientMessageId,
+
         chatId,
+
         msg: optimisticMessage.msg,
+
         msgType: optimisticMessage.msgType,
+
         thumbnail: optimisticMessage.thumbnail,
-        localId,
       };
 
       console.log(
@@ -303,16 +453,39 @@ const ChatScreen = ({navigation, route}) => {
         JSON.stringify(messagePayload, null, 2),
       );
 
-      socket.emit('sendMsg', messagePayload);
+      console.log('Sending Payload');
+
+      console.log(messagePayload);
+
+      console.log('Current chatId =', chatId);
+
+      console.log('Socket Connected =', socket.connected);
+
+      socket.emit('sendMsg', messagePayload, ack => {
+        if (!ack) {
+          updateMessageStatus(clientMessageId, 'failed');
+          return;
+        }
+
+        if (ack.success) {
+          updateMessageStatus(clientMessageId, 'sent');
+        } else {
+          updateMessageStatus(clientMessageId, 'failed');
+        }
+      });
 
       console.log('Message sent');
 
       setText('');
       setImage(null);
       setIsTyping(false);
+      socket.emit('isTyping', {
+        chatId,
+        isTyping: false,
+      });
     } catch (error) {
       console.error('🚨 Error in sendMessage:', error.message);
-      updateMessageStatus(localId, 'failed');
+      updateMessageStatus(clientMessageId, 'failed');
 
       setPendingMessages(prev => [...prev, {msgText, imageUrl}]);
     }
@@ -340,16 +513,21 @@ const ChatScreen = ({navigation, route}) => {
   };
 
   const updateMessageStatus = (id, status) => {
-    setMessages(prev =>
-      prev.map(msg => {
-        if (msg.localId === id || msg._id === id) {
-          return {
-            ...msg,
-            status,
-          };
+    setMessages(previous =>
+      previous.map(message => {
+        const matched =
+          message.clientMessageId === id ||
+          message.localId === id ||
+          String(message._id) === String(id);
+
+        if (!matched) {
+          return message;
         }
 
-        return msg;
+        return {
+          ...message,
+          status,
+        };
       }),
     );
   };
@@ -408,25 +586,42 @@ const ChatScreen = ({navigation, route}) => {
         chatId,
         isTyping: false,
       });
-    }, 1000);
+    }, 2000);
   };
 
   const isMessageRead = message => {
-    return (
-      message.readBy &&
-      message.readBy.some(read => String(read.status) === String('read'))
+    if (!message.readBy) return false;
+
+    return message.readBy.some(
+      read => String(read.userId) !== String(userId) && read.status === 'read',
     );
   };
 
+  const previousLength = useRef(0);
+
   useEffect(() => {
-    if (messages.length > 0 && flatListRef.current) {
-      console.log('🔄 Scrolling to end with', messages.length, 'messages');
-      flatListRef.current.scrollToEnd({animated: true});
+    if (messages.length > previousLength.current) {
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToEnd({
+          animated: true,
+        });
+      });
     }
-  }, [messages]);
+
+    previousLength.current = messages.length;
+  }, [messages.length]);
 
   const sortedMessages = React.useMemo(() => {
-    return [...messages].sort((a, b) => new Date(a.date) - new Date(b.date));
+    return [...messages].sort((a, b) => {
+      const first = new Date(
+        a.createdAt || a.date || a.updatedAt || 0,
+      ).getTime();
+
+      const second = new Date(
+        b.createdAt || b.date || b.updatedAt || 0,
+      ).getTime();
+      return first - second;
+    });
   }, [messages]);
 
   const getMessageSenderId = message => {
@@ -440,7 +635,7 @@ const ChatScreen = ({navigation, route}) => {
   };
 
   const formatMessageTime = dateString => {
-    console.log('date', dateString);
+    // console.log('date', dateString);
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return '';
@@ -475,7 +670,9 @@ const ChatScreen = ({navigation, route}) => {
             color={isDark ? '#fff' : 'rgba(94, 95, 96, 1)'}
           />
           <Image
-            source={{uri: item.profile[0]}}
+            source={{
+              uri: chatUser?.profile?.[0] || 'https://via.placeholder.com/100',
+            }}
             style={{
               width: 50,
               height: 50,
@@ -497,7 +694,7 @@ const ChatScreen = ({navigation, route}) => {
                   color: isDark ? '#fff' : '#000',
                 },
               ]}>
-              {item?.name}
+              {chatUser?.name || 'Unknown'}
             </Text>
             <Text
               numberOfLines={2}
@@ -508,128 +705,12 @@ const ChatScreen = ({navigation, route}) => {
                   fontSize: 13,
                   width: 180,
                   marginTop: 5,
-                  color: item.isOnline ? 'rgba(75, 203, 27, 1)' : 'grey',
+                  color: chatUser.isOnline ? 'rgba(75, 203, 27, 1)' : 'grey',
                 },
               ]}>
-              {item.isOnline ? 'Active' : 'offline'}
+              {chatUser.isOnline ? 'Active' : 'offline'}
             </Text>
           </View>
-          {/* <Entypo
-            onPress={() => toggleModal('item.id')}
-            name="dots-three-vertical"
-            size={24}
-            color={isDark ? '#fff' : '#000'}
-            style={{ alignSelf: 'flex-start', marginTop: 10 }}
-          /> */}
-          {/* {selectedItemId === 'item.id' && (
-            <Pressable
-              style={{
-                position: 'absolute',
-                alignSelf: 'flex-end',
-                top: 40,
-                right: 30,
-              }}
-              onPress={() => toggleModal('item.id')}>
-              <View
-                style={[
-                  styles.modalContent,
-                  { backgroundColor: isDark ? '#121212' : '#fff' },
-                ]}>
-                <TouchableOpacity
-                  style={{
-                    padding: 4,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginLeft: 5,
-                  }}
-                  onPress={() => {}}>
-                  <Octicons
-                    name="history"
-                    size={14}
-                    color={isDark ? '#fff' : '#000'}
-                  />
-                  <Text
-                    style={[
-                      styles.bigText,
-                      {
-                        fontSize: 14,
-                        marginLeft: 5,
-                        fontWeight: '500',
-                        color: isDark ? '#fff' : '#000',
-                      },
-                    ]}>
-                    View History
-                  </Text>
-                </TouchableOpacity>
-                <View
-                  style={{
-                    height: 1,
-                    backgroundColor: isDark ? 'grey' : 'lightgrey',
-                    width: 120,
-                    alignSelf: 'center',
-                    borderRadius: 10,
-                  }}
-                />
-                <TouchableOpacity
-                  style={{
-                    padding: 4,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginLeft: 5,
-                  }}
-                  onPress={() => {}}>
-                  <Entypo name="block" size={16} color={'#f00'} />
-                  <Text
-                    style={[
-                      styles.bigText,
-                      {
-                        fontSize: 14,
-                        marginLeft: 5,
-                        fontWeight: '500',
-                        color: '#f00',
-                      },
-                    ]}>
-                    Block
-                  </Text>
-                </TouchableOpacity>
-                <View
-                  style={{
-                    height: 1,
-                    backgroundColor: isDark ? 'grey' : 'lightgrey',
-                    width: 120,
-                    alignSelf: 'center',
-                    borderRadius: 10,
-                  }}
-                />
-                <TouchableOpacity
-                  style={{
-                    padding: 4,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginLeft: 5,
-                  }}
-                  onPress={() => {}}>
-                  <Octicons
-                    name="mute"
-                    size={16}
-                    color={isDark ? '#fff' : '#000'}
-                  />
-                  <Text
-                    style={[
-                      styles.bigText,
-                      {
-                        fontSize: 14,
-                        marginLeft: 5,
-                        fontWeight: '500',
-                        color: isDark ? '#fff' : '#000',
-                      },
-                    ]}>
-                    Mute
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </Pressable>
-          )} */}
         </View>
         {otherUserTyping && (
           <Text
@@ -643,16 +724,20 @@ const ChatScreen = ({navigation, route}) => {
           </Text>
         )}
         <FlatList
+          initialNumToRender={20}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews
+          keyboardShouldPersistTaps="handled"
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 1,
+          }}
           ref={flatListRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.messagesContainer}
           data={sortedMessages}
           keyExtractor={item =>
-            String(
-              item._id ||
-                item.localId ||
-                `${getMessageSenderId(item)}_${item.date}_${item.msgType}`,
-            )
+            String(item._id || item.clientMessageId || item.localId)
           }
           renderItem={({item}) => {
             // console.log('🔍 Rendering message:', JSON.stringify(item, null, 2));
@@ -706,7 +791,7 @@ const ChatScreen = ({navigation, route}) => {
                         ? styles.sentTimeText
                         : styles.receivedTimeText,
                     ]}>
-                    {formatMessageTime(item.date)}
+                    {formatMessageTime(item.createdAt || item.date)}
                   </Text>
                 </View>
                 {isSentByUser && (

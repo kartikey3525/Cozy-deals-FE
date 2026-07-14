@@ -14,8 +14,8 @@ import {
   Platform,
 } from 'react-native';
 import io from 'socket.io-client';
-// const API_URL = 'http://10.0.2.2:8080';
-const API_URL = 'https://cozy-deals-be-production.up.railway.app';
+const API_URL = 'http://10.0.2.2:8080';
+// const API_URL = 'https://cozy-deals-be-production.up.railway.app';
 
 const AuthContext = createContext();
 
@@ -137,10 +137,8 @@ const AuthProvider = ({children}) => {
     const handleAppStateChange = nextAppState => {
       if (appState.match(/inactive|background/) && nextAppState === 'active') {
         initializeSocket();
-      } else if (nextAppState.match(/inactive|background/) && socket) {
-        socket.disconnect();
-        setSocket(null);
       }
+
       setAppState(nextAppState);
     };
 
@@ -148,11 +146,11 @@ const AuthProvider = ({children}) => {
       'change',
       handleAppStateChange,
     );
+
     return () => {
       subscription.remove();
-      if (socket) socket.disconnect();
     };
-  }, [appState, socket]);
+  }, [appState]);
 
   // Initialize Google Sign-In, Notifications, and Check Login
   useEffect(() => {
@@ -173,7 +171,7 @@ const AuthProvider = ({children}) => {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
 
-      if (socket) socket.disconnect();
+      // if (socket) socket.disconnect();
 
       const newSocket = io(`${API_URL}/chat`, {
         transports: ['websocket'],
@@ -185,8 +183,8 @@ const AuthProvider = ({children}) => {
 
       newSocket.on('connect', () => {
         console.log('✅ Socket connected!');
+
         setSocket(newSocket);
-        initializeChat(newSocket);
       });
 
       newSocket.on('connect_error', error =>
@@ -1230,10 +1228,6 @@ const AuthProvider = ({children}) => {
       console.warn('Permission error:', err);
       return false;
     }
-  };
-
-  const initializeChat = () => {
-    // Placeholder for chat initialization logic
   };
 
   return (
