@@ -88,21 +88,13 @@ const Messages = ({navigation}) => {
     }
 
     const handlechatList = response => {
-      // console.log('📩 Received chatList:', JSON.stringify(response, null, 2));
+      console.log('📥 Chat List Received');
 
       setChatLoading(false);
       isFetchingRef.current = false;
-      if (response?.data && Array.isArray(response.data)) {
-        setChatListData(prev => {
-          if (
-            prev.length === response.data.length &&
-            prev.every((item, index) => item._id === response.data[index]?._id)
-          ) {
-            return prev;
-          }
 
-          return response.data;
-        });
+      if (response?.data && Array.isArray(response.data)) {
+        setChatListData(response.data);
       } else {
         setChatListData([]);
       }
@@ -133,17 +125,19 @@ const Messages = ({navigation}) => {
     };
 
     socket.on('chatList', handlechatList);
+    socket.on('chatUpdated', handleChatUpdated);
+
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('connect_error', handleConnectError);
-    socket.on('chatUpdated', handleChatUpdated);
 
     return () => {
       socket.off('chatList', handlechatList);
+      socket.off('chatUpdated', handleChatUpdated);
+
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
-      socket.off('chatUpdated', handleChatUpdated);
     };
   }, [socket, fetchChatList]);
 
@@ -237,6 +231,8 @@ const Messages = ({navigation}) => {
 
   const renderChatListItem = useCallback(
     ({item}) => {
+      const preview =
+        item.lastMessage?.msg || item.lastMsg?.msg || 'No messages';
       const navigateToChat = () => {
         navigation.navigate('Chatscreen', {
           item: {
@@ -309,10 +305,12 @@ const Messages = ({navigation}) => {
                   styles.messagePreviewText,
                   {color: isDark ? '#fff' : '#1d1e20'},
                 ]}>
-                {item.lastMessage?.msg || 'No messages'}
+                {preview}
                 <Text style={styles.timeElapsedText}>
                   {' • '}
-                  {formatTimeElapsed(item.lastMessage?.date)}
+                  {formatTimeElapsed(
+                    item.lastMessage?.date || item.lastMsg?.date,
+                  )}
                 </Text>
               </Text>
             </View>
@@ -402,15 +400,23 @@ const Messages = ({navigation}) => {
 
   const availableUsers = userdata?.role === 'buyer' ? filteredPosts : buyerList;
 
-  const listData = isSearching
-    ? filteredLists
-    : searchAllUsers
-    ? availableUsers
-    : chatListData;
+  const listData = React.useMemo(() => {
+    if (isSearching) return filteredLists;
 
-  const renderItem = searchAllUsers
-    ? renderFilteredPostItem
-    : renderChatListItem;
+    if (searchAllUsers) return availableUsers;
+
+    return chatListData;
+  }, [
+    isSearching,
+    filteredLists,
+    searchAllUsers,
+    availableUsers,
+    chatListData,
+  ]);
+
+  const renderItem = React.useMemo(() => {
+    return searchAllUsers ? renderFilteredPostItem : renderChatListItem;
+  }, [searchAllUsers, renderFilteredPostItem, renderChatListItem]);
 
   console.log('searchAllUsers:', searchAllUsers);
   console.log('filteredPosts:', filteredPosts.length);
@@ -440,12 +446,7 @@ const Messages = ({navigation}) => {
       <FlatList
         data={listData}
         renderItem={renderItem}
-        extraData={{
-          searchAllUsers,
-          filteredPosts,
-          chatListData,
-          isSearching,
-        }}
+        extraData={[searchAllUsers, isSearching, chatLoading]}
         keyExtractor={(item, index) =>
           String(
             searchAllUsers
@@ -465,7 +466,9 @@ const Messages = ({navigation}) => {
               textAlign: 'center',
               marginTop: 20,
             }}>
-            {searchAllUsers ? 'No users found' : 'No chats available'}
+            {searchAllUsers
+              ? 'No users available'
+              : 'Start a conversation to see your chats'}
           </Text>
         }
       />

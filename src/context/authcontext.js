@@ -14,8 +14,8 @@ import {
   Platform,
 } from 'react-native';
 import io from 'socket.io-client';
-const API_URL = 'http://10.0.2.2:8080';
-// const API_URL = 'https://cozy-deals-be-production.up.railway.app';
+// const API_URL = 'http://10.0.2.2:8080';
+const API_URL = 'https://cozy-deals-be-production.up.railway.app';
 
 const AuthContext = createContext();
 
