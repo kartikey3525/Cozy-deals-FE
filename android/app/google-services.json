@@ -12,7 +12,20 @@
           "package_name": "com.cozydeal"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "945009550802-e7agdmc7evh2u1ukl9k7mf7h8me1qtdn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cozydeal",
+            "certificate_hash": "754509ebf4deca9bf0a59f7bb0bb70051ee0ec92"
+          }
+        },
+        {
+          "client_id": "945009550802-tngsfs4c21vkp09ifircs4vk8mfa810h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCIgl9g4OcOPxg9JZco2t3EUoSb8dZsVx4"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "945009550802-tngsfs4c21vkp09ifircs4vk8mfa810h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -15,8 +15,8 @@ import {
   Platform,
 } from 'react-native';
 import io from 'socket.io-client';
-// const API_URL = 'http://10.0.2.2:8080';
-const API_URL = 'https://cozy-deals-be-production.up.railway.app';
+const API_URL = 'http://10.0.2.2:8080';
+// const API_URL = 'https://cozy-deals-be-production.up.railway.app';
 
 const AuthContext = createContext();
 
@@ -159,8 +159,9 @@ const AuthProvider = ({children}) => {
   useEffect(() => {
     GoogleSignin.configure({
       webClientId:
-        '607680481080-oiu9qspqr54vf8cqg5maogt2f4vorf72.apps.googleusercontent.com',
+        '945009550802-tngsfs4c21vkp09ifircs4vk8mfa810h.apps.googleusercontent.com',
       offlineAccess: true,
+      forceCodeForRefreshToken: true,
     });
     getDeviceToken();
     checkLoginStatus();
@@ -374,6 +375,9 @@ const AuthProvider = ({children}) => {
   const signInWithGoogle = async () => {
     setIsLoading(prev => ({...prev, google: true}));
     try {
+      await GoogleSignin.signOut().catch(() => {});
+      await GoogleSignin.revokeAccess().catch(() => {});
+
       await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
       const signInResult = await GoogleSignin.signIn();
       const idToken = signInResult.data?.idToken || signInResult.user?.idToken;
@@ -419,7 +423,7 @@ const AuthProvider = ({children}) => {
         ['selectedUserRole', userRole],
         ['rememberMe', 'true'],
       ]);
-      navigation.navigate('AddressScreen');
+      navigation.navigate('BottomTabs');
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       await GoogleSignin.signOut();
