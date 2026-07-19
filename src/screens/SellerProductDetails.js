@@ -135,7 +135,7 @@ const shareProductDeepLink = async () => {
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
+      style={[styles.container, {backgroundColor: isDark ? '#000' : '#fff'}]}>
       <Header header={'Product Details'} />
 
       {/* Image Carousel */}
@@ -143,23 +143,29 @@ const shareProductDeepLink = async () => {
 
       {/* Product Details */}
       <View style={styles.detailsContainer}>
-      <Text
+        <Text
           numberOfLines={2}
-          style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>
+          style={[styles.title, {color: isDark ? '#fff' : '#000'}]}>
           {Data.productName}
         </Text>
         <Text
           numberOfLines={2}
-          style={[styles.title, { color: isDark ? '#fff' : 'grey',fontSize:16 }]}>
+          style={[
+            styles.title,
+            {color: isDark ? '#fff' : 'grey', fontSize: 16},
+          ]}>
           {Data.description}
         </Text>
-        <Text style={[styles.info, { color: isDark ? '#fff' : '#000' }]}>
-          <Ionicons name="location-outline" size={16} /> {Data.location}
+        <Text style={[styles.info, {color: isDark ? '#fff' : '#000'}]}>
+          <Ionicons name="location-outline" size={16} />
+          {typeof Data.location === 'string'
+            ? Data.location
+            : Data.location?.address || 'N/A'}
         </Text>
-        <Text style={[styles.info, { color: isDark ? '#fff' : '#000' }]}>
+        <Text style={[styles.info, {color: isDark ? '#fff' : '#000'}]}>
           <Ionicons name="call-outline" size={16} /> {Data.contactNumber}
         </Text>
-        <Text style={[styles.info, { color: isDark ? '#fff' : '#000' }]}>
+        <Text style={[styles.info, {color: isDark ? '#fff' : '#000'}]}>
           <Ionicons name="mail-outline" size={16} /> {Data.contactEmail}
         </Text>
       </View>
@@ -168,32 +174,31 @@ const shareProductDeepLink = async () => {
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           onPress={() => Linking.openURL(`tel:${Data?.contactNumber}`)}
-          style={[styles.button, { backgroundColor: 'rgba(7, 201, 29, 1)' }]}>
+          style={[styles.button, {backgroundColor: 'rgba(7, 201, 29, 1)'}]}>
           <Ionicons name="call-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>Call</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          
           onPress={() => {
-          console.log('data',Data);
-          navigation.navigate('Chatscreen', {
-            item: {
-              _id: Data.userId, // The seller's user ID
-              name: Data.contactEmail, // You should get this from user data
-              profile: Data.images, // Seller's profile image
-              isOnline: false, // Get from user status
-              Data
-            },
-            userId: Userfulldata._id,
-          });
+            console.log('data', Data);
+            navigation.navigate('Chatscreen', {
+              item: {
+                _id: Data.userId, // The seller's user ID
+                name: Data.contactEmail, // You should get this from user data
+                profile: Data.images, // Seller's profile image
+                isOnline: false, // Get from user status
+                Data,
+              },
+              userId: Userfulldata._id,
+            });
           }}
-          style={[styles.button, { backgroundColor: 'rgba(15, 92, 246, 1)' }]}>
+          style={[styles.button, {backgroundColor: 'rgba(15, 92, 246, 1)'}]}>
           <Ionicons name="chatbubble-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>SMS</Text>
         </TouchableOpacity>
         <TouchableOpacity
-           onPress={shareProductDeepLink}
-          style={[styles.button, { backgroundColor: 'rgba(33, 150, 243, 1)' }]}>
+          onPress={shareProductDeepLink}
+          style={[styles.button, {backgroundColor: 'rgba(33, 150, 243, 1)'}]}>
           <Entypo name="share" size={20} color="#fff" />
           <Text style={styles.buttonText}>Share</Text>
         </TouchableOpacity>

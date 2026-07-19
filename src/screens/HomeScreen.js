@@ -221,9 +221,9 @@ export default function HomeScreen({navigation}) {
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
+    getCategories();
     if (!location) return;
     if (userRole === 'buyer') {
-      getCategories();
       getRecentPosts();
       getNearbyPosts();
     } else {
