@@ -155,7 +155,6 @@ const AuthProvider = ({children}) => {
       subscription.remove();
     };
   }, [appState]);
-
   // Initialize Google Sign-In, Notifications, and Check Login
   useEffect(() => {
     GoogleSignin.configure({
@@ -214,7 +213,13 @@ const AuthProvider = ({children}) => {
           sound: true,
         });
       }
+      if (Platform.OS === 'android' && Platform.Version >= 33) {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
 
+        console.log('Notification Permission:', granted);
+      }
       // 3. Create notification channel (Android only)
       await notifee.createChannel({
         id: 'default',
@@ -526,6 +531,8 @@ const AuthProvider = ({children}) => {
       const token = await messaging().getToken();
       if (token) {
         setFcmToken(token);
+        console.log('fcmToken', token);
+
         // Send token to your backend here
       }
     } catch (error) {

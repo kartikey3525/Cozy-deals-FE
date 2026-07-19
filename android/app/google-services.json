@@ -1,51 +1,26 @@
 {
   "project_info": {
-    "project_number": "607680481080",
-    "project_id": "cozydeal-68ce9",
-    "storage_bucket": "cozydeal-68ce9.firebasestorage.app"
+    "project_number": "945009550802",
+    "project_id": "cozydeal-9c79e",
+    "storage_bucket": "cozydeal-9c79e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:607680481080:android:83cc3dbeddc6c9fb5c63cd",
+        "mobilesdk_app_id": "1:945009550802:android:4c70f15adb8837eae9140b",
         "android_client_info": {
           "package_name": "com.cozydeal"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "607680481080-761vdl7ujt5ood125g74qcjbikk0v67v.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.cozydeal",
-            "certificate_hash": "2f4566329c8d020dcab15d6be667c738539212d1"
-          }
-        },
-        {
-          "client_id": "607680481080-oiu9qspqr54vf8cqg5maogt2f4vorf72.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDwOjv7CttvSpqGTTQx3aL0mfjc4fwm1XE"
+          "current_key": "AIzaSyCIgl9g4OcOPxg9JZco2t3EUoSb8dZsVx4"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "607680481080-oiu9qspqr54vf8cqg5maogt2f4vorf72.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "607680481080-dl3aj3fa3cvk4hbp54mmrf6pi1bi9u98.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "org.reactjs.native.example.Cozydeal"
-              }
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
