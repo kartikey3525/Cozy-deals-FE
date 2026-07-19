@@ -1,115 +1,153 @@
-import React, { useContext, useEffect, useState } from 'react';
+import {Slider} from '@miblanchard/react-native-slider';
+import {useIsFocused} from '@react-navigation/native';
+import React, {useContext, useEffect, useMemo, useState} from 'react';
 import {
-  View,
-  TextInput,
+  Dimensions,
+  FlatList,
+  Image,
+  Linking,
+  Modal,
+  Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  Image,
-  Pressable,
-  Modal,
-  Linking,
+  View,
 } from 'react-native';
-import Octicons from 'react-native-vector-icons/Octicons';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import Entypo from 'react-native-vector-icons/Entypo';
-import { ThemeContext } from '../context/themeContext';
-import { Dimensions } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Octicons from 'react-native-vector-icons/Octicons';
+import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
+import RatingButtons from '../components/RatingButtons';
+import RatingTest from '../components/RatingTest';
+import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
-import { ScrollView } from 'react-native-gesture-handler';
-import { Slider } from '@miblanchard/react-native-slider';
-import RatingButtons from '../components/RatingButtons';
-import { useIsFocused } from '@react-navigation/native';
-import { AuthContext } from '../context/authcontext';
-import RatingTest from '../components/RatingTest';
-import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
 
-export default function ShopScreen({ navigation, route }) {
-  const { theme } = useContext(ThemeContext);
-  const { getFilteredPosts, filteredPosts } = useContext(AuthContext);
+export default function ShopScreen({navigation, route}) {
+  const {theme} = useContext(ThemeContext);
+  const {
+    getFilteredShops,
+    filteredShops,
+    applyShopFilters,
+    location,
+    calculateDistance,
+  } = useContext(AuthContext);
   const isFocused = useIsFocused();
 
   const isDark = theme === 'dark';
   const [modalVisible, setModalVisible] = useState(false);
-  const [value, setValue] = useState([0, 2]);
+  const [distance, setDistance] = useState(25);
   const [selectedRating, setSelectedRating] = useState(null);
-  const [filteredLists, setFilteredLists] = useState([]);
   const [searchText, setSearchText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [allShops, setAllShops] = useState([]);
+  // const [visibleShops, setVisibleShops] = useState([]);
+  const [selectedLocations, setSelectedLocations] = useState([]);
 
-  // Consolidated useEffect for fetching and filtering posts
+  // Fetch shops when screen focuses or category changes
   useEffect(() => {
     if (!isFocused) return;
+    getFilteredShops(route?.params?.selectedcategory);
+  }, [isFocused, route?.params?.selectedcategory]);
 
-    const selectedCategory = route?.params?.selectedcategory;
+  // Seed local allShops from context ONLY — no writing back to context here
+  useEffect(() => {
+    if (!Array.isArray(filteredShops)) return;
+    setAllShops(filteredShops);
+  }, [filteredShops]);
 
-    // Fetch filtered posts
-    getFilteredPosts(selectedCategory, selectedRating);
+  const shopsWithDistance = useMemo(() => {
+    return allShops.map(shop => {
+      const lat = shop.latitude ?? shop.location?.latitude;
+      const lng = shop.longitude ?? shop.location?.longitude;
 
-    // Filter posts based on selectedCategory
-    if (Array.isArray(filteredPosts)) {
-      const filteredList = filteredPosts.filter(item =>
-        item.selectedCategories?.includes(selectedCategory)
-      );
-      setFilteredLists(filteredList);
-      console.log('Filtered Posts:', filteredList, 'Selected Category:', selectedCategory);
-    } else {
-      console.error('filteredPosts is not an array:', filteredPosts);
-    }
-  }, [isFocused, filteredPosts, route?.params?.selectedcategory, selectedRating, getFilteredPosts]);
+      const distance =
+        location && lat && lng
+          ? calculateDistance(
+              Number(location.latitude),
+              Number(location.longitude),
+              Number(lat),
+              Number(lng),
+            )
+          : null;
 
-  // Search filter function
-  const searchFilterFunction = text => {
-    setSearchText(text);
+      return {...shop, distance};
+    });
+  }, [allShops, location, calculateDistance]);
 
-    if (text.trim() === '') {
-      // Reset to filtered list based on category
-      if (Array.isArray(filteredPosts)) {
-        const filteredList = filteredPosts.filter(item =>
-          item.selectedCategories?.includes(route?.params?.selectedcategory)
-        );
-        setFilteredLists(filteredList);
-      }
-      return;
-    }
+  const availableLocations = useMemo(() => {
+    const locations = shopsWithDistance
+      .map(shop => {
+        if (shop.location?.city) return shop.location.city;
+        if (shop.businessAddress) {
+          const parts = shop.businessAddress.split(',').map(p => p.trim());
+          return parts[0] || null;
+        }
+        return null;
+      })
+      .filter(Boolean);
 
-    const lowerCaseText = text.toLowerCase();
+    return [...new Set(locations)];
+  }, [shopsWithDistance]);
 
-    if (!Array.isArray(filteredPosts)) {
-      console.error('filteredPosts is not an array:', filteredPosts);
-      return;
-    }
+  const toggleLocation = loc => {
+    setSelectedLocations(prev =>
+      prev.includes(loc) ? prev.filter(l => l !== loc) : [...prev, loc],
+    );
+  };
 
-    const filteredResults = filteredPosts.filter(
-      item =>
-        item.selectedCategories?.includes(route?.params?.selectedcategory) &&
-        item?.name?.toLowerCase().includes(lowerCaseText)
+  const visibleShops = useMemo(() => {
+    if (!Array.isArray(shopsWithDistance)) return [];
+
+    const filtered = applyShopFilters(
+      shopsWithDistance,
+      route?.params?.selectedcategory,
+      selectedRating,
+      distance,
+      distance !== null ? 'distance' : 'rating',
+      selectedLocations,
     );
 
-    setFilteredLists(filteredResults);
-  };
+    if (!searchText.trim()) return filtered;
 
-  const [recentPostList] = useState([
-    { id: 1, title: 'Samsung phone', img: require('../assets/sam-phone.png') },
-    { id: 2, title: 'smart watch', img: require('../assets/watch.png') },
-    { id: 3, title: 'Medicine', img: require('../assets/packagedfood.png') },
-    { id: 4, title: 'packaged food', img: require('../assets/clothes.png') },
-    { id: 5, title: 'Groceries', img: require('../assets/groceries.png') },
-    { id: 6, title: 'Furniture', img: require('../assets/furniture.png') },
-    { id: 8, title: 'Food', img: require('../assets/food.png') },
-    { id: 7, title: 'Shoes', img: require('../assets/shoes.png') },
-    { id: 9, title: 'Home service', img: require('../assets/home-service.png') },
-    { id: 10, title: 'Hospital', img: require('../assets/hospital.png') },
-    { id: 11, title: 'Jwellery', img: require('../assets/jwelery.png') },
-    { id: 12, title: 'See more', img: require('../assets/see-more.png') },
+    const keyword = searchText.toLowerCase();
+    return filtered.filter(item => {
+      const searchable = [
+        item.shopName,
+        item.ownerName,
+        item.name,
+        item.businessAddress,
+        item.contactNumber,
+        item.contactEmail,
+        item.location?.city,
+        item.location?.state,
+        item.location?.pincode,
+        ...(item.selectedCategories || []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(keyword);
+    });
+  }, [
+    shopsWithDistance,
+    route?.params?.selectedcategory,
+    selectedRating,
+    distance,
+    selectedLocations,
+    searchText,
+    applyShopFilters,
   ]);
 
-  const formatDate = timestamp => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString();
+  const searchFilterFunction = text => {
+    setSearchText(text);
   };
 
-  const render2RectangleList = ({ item, index }) => {
+  const render2RectangleList = ({item, index}) => {
     return (
       <Pressable
         style={{
@@ -117,8 +155,7 @@ export default function ShopScreen({ navigation, route }) {
           marginBottom: 15,
           alignItems: 'center',
         }}
-        onPress={() => navigation.navigate('shopdetails', { item })}
-      >
+        onPress={() => navigation.navigate('shopdetails', {item})}>
         <View
           style={[
             styles.rectangle2,
@@ -127,10 +164,13 @@ export default function ShopScreen({ navigation, route }) {
               overflow: 'hidden',
               flexDirection: 'row',
             },
-          ]}
-        >
+          ]}>
           <Image
-            source={{ uri: item.profile?.[0] }}
+            source={
+              item.profile?.[0]
+                ? {uri: item.profile[0]}
+                : require('../assets/shop-pic.png')
+            }
             style={{
               width: '30%',
               height: '90%',
@@ -140,7 +180,7 @@ export default function ShopScreen({ navigation, route }) {
               margin: 8,
             }}
           />
-          <View style={{ alignSelf: 'flex-start' }}>
+          <View style={{alignSelf: 'flex-start'}}>
             <Text
               numberOfLines={2}
               style={[
@@ -154,11 +194,10 @@ export default function ShopScreen({ navigation, route }) {
                   marginLeft: 0,
                   width: Width * 0.56,
                 },
-              ]}
-            >
+              ]}>
               {item?.shopName || item?.name}
             </Text>
-            <View style={{ flexDirection: 'row', marginTop: 2 }}>
+            <View style={{flexDirection: 'row', marginTop: 2}}>
               <Text
                 numberOfLines={1}
                 style={[
@@ -170,11 +209,10 @@ export default function ShopScreen({ navigation, route }) {
                     fontSize: 13,
                     color: isDark ? '#fff' : '#000',
                   },
-                ]}
-              >
-                {item.averageRating}
+                ]}>
+                {Number(item.averageRating || 0).toFixed(1)}
               </Text>
-              <RatingTest fixedRating={item.averageRating} />
+              <RatingTest fixedRating={Number(item.averageRating || 0)} />
             </View>
             <View
               style={{
@@ -182,8 +220,7 @@ export default function ShopScreen({ navigation, route }) {
                 marginBottom: 5,
                 alignItems: 'center',
                 marginTop: 4,
-              }}
-            >
+              }}>
               <Text
                 numberOfLines={2}
                 style={[
@@ -194,8 +231,7 @@ export default function ShopScreen({ navigation, route }) {
                     fontWeight: 'bold',
                     fontSize: 10,
                   },
-                ]}
-              >
+                ]}>
                 Open :
               </Text>
               <Text
@@ -210,8 +246,7 @@ export default function ShopScreen({ navigation, route }) {
                     width: 95,
                     left: 5,
                   },
-                ]}
-              >
+                ]}>
                 {item.openTime}-{item.closeTime}
               </Text>
             </View>
@@ -221,8 +256,7 @@ export default function ShopScreen({ navigation, route }) {
                 marginBottom: 5,
                 alignItems: 'center',
                 marginTop: 2,
-              }}
-            >
+              }}>
               <Image
                 source={
                   isDark
@@ -247,8 +281,7 @@ export default function ShopScreen({ navigation, route }) {
                     width: Width * 0.5,
                     left: 5,
                   },
-                ]}
-              >
+                ]}>
                 {item.businessAddress}
               </Text>
             </View>
@@ -260,8 +293,7 @@ export default function ShopScreen({ navigation, route }) {
                 alignSelf: 'flex-end',
                 marginRight: 8,
                 marginTop: 5,
-              }}
-            >
+              }}>
               <Pressable
                 style={{
                   marginRight: 5,
@@ -273,8 +305,9 @@ export default function ShopScreen({ navigation, route }) {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
-                onPress={() => Linking.openURL(`tel:${item.phone}`)}
-              >
+                onPress={() =>
+                  Linking.openURL(`tel:${item.contactNumber || item.phone}`)
+                }>
                 <Ionicons name={'call'} size={16} color="rgba(7, 201, 29, 1)" />
               </Pressable>
               <Pressable
@@ -287,8 +320,7 @@ export default function ShopScreen({ navigation, route }) {
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
-                onPress={() => navigation.navigate('messages', { item: null })}
-              >
+                onPress={() => navigation.navigate('messages', {item: item})}>
                 <Ionicons
                   name={'chatbubble-ellipses-outline'}
                   size={16}
@@ -302,52 +334,22 @@ export default function ShopScreen({ navigation, route }) {
     );
   };
 
-  const DEFAULT_VALUE = 0;
+  const onRefresh = async () => {
+    setRefreshing(true);
 
-  const SliderContainer = props => {
-    const { sliderValue, trackMarks } = props;
-    const [value, setValue] = React.useState(sliderValue || DEFAULT_VALUE);
-    let renderTrackMarkComponent;
-
-    if (trackMarks?.length && (!Array.isArray(value) || value?.length === 1)) {
-      renderTrackMarkComponent = index => {
-        const currentMarkValue = trackMarks[index];
-        const currentSliderValue = value || (Array.isArray(value) && value[0]) || 0;
-        const style = currentMarkValue > Math.max(currentSliderValue);
-        return <View style={style} />;
-      };
-    }
-
-    const renderChildren = () => {
-      const childrenArray = React.Children.toArray(props.children);
-      return React.Children.map(childrenArray, (child, index) => {
-        if (child && child.type === Slider) {
-          return React.cloneElement(child, {
-            onValueChange: setValue,
-            renderTrackMarkComponent,
-            trackMarks,
-            value,
-          });
-        }
-        return child;
-      });
-    };
-
-    return (
-      <View style={styles.sliderContainer}>
-        <View style={{ marginTop: 20 }}>
-          <Text style={{ color: isDark ? '#fff' : '#000', fontWeight: 'bold' }}>
-            {Array.isArray(value) ? value.join(' km - ') : value} km
-          </Text>
-        </View>
-        {renderChildren()}
-      </View>
+    await getFilteredShops(
+      route?.params?.selectedcategory,
+      selectedRating,
+      distance,
     );
+
+    setRefreshing(false);
   };
 
   return (
     <KeyboardAvoidingContainer>
-      <View style={[styles.screen, { backgroundColor: isDark ? '#000' : '#fff' }]}>
+      <View
+        style={[styles.screen, {backgroundColor: isDark ? '#000' : '#fff'}]}>
         <View
           style={{
             alignItems: 'center',
@@ -355,14 +357,13 @@ export default function ShopScreen({ navigation, route }) {
             flexDirection: 'row',
             height: Height * 0.1,
             justifyContent: 'flex-start',
-          }}
-        >
+          }}>
           <Entypo
             onPress={() => navigation.goBack()}
             name="chevron-thin-left"
             size={20}
             color={isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(94, 95, 96, 1)'}
-            style={{ marginLeft: 20, padding: 5 }}
+            style={{marginLeft: 20, padding: 5}}
           />
           <Text
             style={[
@@ -375,8 +376,7 @@ export default function ShopScreen({ navigation, route }) {
                 width: Width * 0.72,
                 textAlign: 'center',
               },
-            ]}
-          >
+            ]}>
             Shop
           </Text>
         </View>
@@ -385,22 +385,19 @@ export default function ShopScreen({ navigation, route }) {
             width: Width,
             justifyContent: 'center',
             alignItems: 'center',
-          }}
-        >
+          }}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: 15,
-            }}
-          >
+            }}>
             <View
               style={[
                 styles.inputContainer,
-                { backgroundColor: isDark ? 'rgb(0, 0, 0)' : '#fff' },
-              ]}
-            >
+                {backgroundColor: isDark ? 'rgb(0, 0, 0)' : '#fff'},
+              ]}>
               <Image
                 source={require('../assets/search-icon.png')}
                 style={{
@@ -415,10 +412,14 @@ export default function ShopScreen({ navigation, route }) {
                 style={[
                   styles.searchInput,
                   {
-                    color: isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(94, 95, 96, 1)',
+                    color: isDark
+                      ? 'rgba(255, 255, 255, 1)'
+                      : 'rgba(94, 95, 96, 1)',
                   },
                 ]}
-                placeholderTextColor={isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(94, 95, 96, 1)'}
+                placeholderTextColor={
+                  isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(94, 95, 96, 1)'
+                }
                 placeholder="Search here"
                 onChangeText={searchFilterFunction}
                 autoCorrect={false}
@@ -434,13 +435,14 @@ export default function ShopScreen({ navigation, route }) {
                 width: '13%',
                 alignSelf: 'center',
                 borderRadius: 10,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.31)' : 'rgb(0, 0, 0)',
+                borderColor: isDark
+                  ? 'rgba(255, 255, 255, 0.31)'
+                  : 'rgb(0, 0, 0)',
                 justifyContent: 'center',
                 alignItems: 'center',
                 borderWidth: 1,
                 marginLeft: 10,
-              }}
-            >
+              }}>
               <Image
                 source={require('../assets/category-icon.png')}
                 style={{
@@ -452,260 +454,277 @@ export default function ShopScreen({ navigation, route }) {
               />
             </TouchableOpacity>
           </View>
-          <ScrollView
+          <FlatList
+            data={visibleShops}
+            keyExtractor={(item, index) =>
+              item._id || item.id?.toString() || index.toString()
+            }
+            renderItem={({item, index}) => render2RectangleList({item, index})}
+            contentContainerStyle={{
+              paddingBottom: 30,
+              paddingHorizontal: 10,
+            }}
             showsVerticalScrollIndicator={false}
-            style={{ height: Height * 0.8, flexGrow: 1, width: Width }}
-          >
-            {filteredLists.map((item, index) => (
-              <View key={item.id ?? `post-${index}`}>
-                {render2RectangleList({ item, index })}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={() => (
+              <View
+                style={{
+                  marginTop: 100,
+                  alignItems: 'center',
+                }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: isDark ? '#fff' : '#666',
+                  }}>
+                  No shops found
+                </Text>
               </View>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
+
         <Modal
           visible={modalVisible}
           animationType="slide"
           transparent={true}
-          onRequestClose={() => setModalVisible(false)}
-        >
+          onRequestClose={() => setModalVisible(false)}>
           <Pressable
-            style={[styles.modalContainer]}
-            onPress={() => setModalVisible(false)}
-          >
-            <View
+            style={styles.modalContainer}
+            onPress={() => setModalVisible(false)}>
+            <Pressable
               style={[
                 styles.modalContent,
-                {
-                  backgroundColor: isDark ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)',
-                },
+                {backgroundColor: isDark ? '#0d0d0d' : '#fff'},
               ]}
-            >
-              <Pressable
-                style={{
-                  height: 5,
-                  backgroundColor: 'lightgrey',
-                  width: 60,
-                  position: 'absolute',
-                  alignSelf: 'center',
-                  borderRadius: 10,
-                  top: 10,
-                }}
-                onPress={() => setModalVisible(false)}
-              />
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: '5%',
-                  alignSelf: 'flex-start',
-                }}
-              >
+              onPress={e => e.stopPropagation()}>
+              <View style={styles.modalHandle} />
+
+              {/* Header */}
+              <View style={styles.modalHeader}>
                 <Text
                   style={[
-                    styles.bigText,
-                    {
-                      fontSize: 17,
-                      fontWeight: 'bold',
-                      width: Width * 0.76,
-                      color: isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(0, 0, 0, 1)',
-                    },
-                  ]}
-                >
-                  Quick sort
+                    styles.modalTitle,
+                    {color: isDark ? '#fff' : '#111'},
+                  ]}>
+                  Filters
                 </Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setValue([0, 2]);
+                    setDistance(25);
                     setSelectedRating(null);
+                    setSelectedLocations([]);
+                    getFilteredShops(route?.params?.selectedcategory, null, 25);
+                    setSearchText('');
                     setModalVisible(false);
-                    getFilteredPosts(route?.params?.selectedcategory, null);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.bigText,
-                      {
-                        color: isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(0, 0, 0, 1)',
-                        fontSize: 17,
-                        fontWeight: 'bold',
-                      },
-                    ]}
-                  >
-                    Reset
-                  </Text>
+                  }}>
+                  <Text style={styles.resetText}>Reset</Text>
                 </TouchableOpacity>
               </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: '5%',
-                  alignSelf: 'flex-start',
-                }}
-              >
-                <TouchableOpacity
-                  style={{
-                    borderRadius: 15,
-                    borderWidth: 1,
-                    padding: 10,
-                    flexDirection: 'row',
-                    borderColor: 'rgba(228, 228, 228, 1)',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start',
-                    marginRight: '10%',
+
+              <View style={styles.modalScroll}>
+                {/* Quick sort */}
+                <Text
+                  style={[
+                    styles.sectionLabel,
+                    {color: isDark ? '#8a8a8a' : '#8a8a8a'},
+                  ]}>
+                  QUICK SORT
+                </Text>
+                <View style={styles.chipRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.chip,
+                      selectedRating === 4.5 && styles.chipActive,
+                      {borderColor: isDark ? '#333' : '#e5e5e5'},
+                    ]}
+                    onPress={() => {
+                      setSelectedRating(4.5);
+                      setModalVisible(false);
+                      getFilteredShops(
+                        route?.params?.selectedcategory,
+                        4.5,
+                        distance,
+                      );
+                    }}>
+                    <Octicons
+                      name="star-fill"
+                      size={14}
+                      color={
+                        selectedRating === 4.5
+                          ? '#00AEEF'
+                          : isDark
+                          ? '#ccc'
+                          : '#555'
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.chipText,
+                        {color: isDark ? '#fff' : '#222'},
+                        selectedRating === 4.5 && styles.chipTextActive,
+                      ]}>
+                      Top Rated
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.chip,
+                      selectedRating === 4 && styles.chipActive,
+                      {borderColor: isDark ? '#333' : '#e5e5e5'},
+                    ]}
+                    onPress={() => {
+                      setSelectedRating(4);
+                      getFilteredShops(
+                        route?.params?.selectedcategory,
+                        4,
+                        distance,
+                      );
+                    }}>
+                    <Octicons
+                      name="star-fill"
+                      size={14}
+                      color={
+                        selectedRating === 4
+                          ? '#00AEEF'
+                          : isDark
+                          ? '#ccc'
+                          : '#555'
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.chipText,
+                        {color: isDark ? '#fff' : '#222'},
+                        selectedRating === 4 && styles.chipTextActive,
+                      ]}>
+                      Quick Response
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Rating */}
+                <Text
+                  style={[
+                    styles.sectionLabel,
+                    {color: '#8a8a8a', marginTop: 24},
+                  ]}>
+                  RATING
+                </Text>
+                <RatingButtons
+                  selectedRating={selectedRating}
+                  onSelectRating={rating => {
+                    setSelectedRating(rating);
                   }}
-                  onPress={() => {
-                    setSelectedRating('top_rated');
-                    setModalVisible(false);
-                    getFilteredPosts(route?.params?.selectedcategory, 'top_rated');
-                  }}
-                >
-                  <Octicons
-                    name={'star-fill'}
-                    size={22}
-                    color={isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(94, 95, 96, 1)'}
-                  />
+                />
+
+                {/* Distance */}
+                <View style={styles.sectionRowBetween}>
                   <Text
                     style={[
-                      styles.bigText,
-                      {
-                        fontSize: 16,
-                        fontWeight: 'bold',
-                        marginLeft: 6,
-                        color: isDark ? 'rgba(255, 255, 255, 1)' : 'rgb(0, 0, 0)',
-                      },
-                    ]}
-                  >
-                    Top Rated
+                      styles.sectionLabel,
+                      {color: '#8a8a8a', marginTop: 24},
+                    ]}>
+                    DISTANCE
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    borderRadius: 15,
-                    borderWidth: 1,
-                    padding: 10,
-                    flexDirection: 'row',
-                    borderColor: 'rgba(228, 228, 228, 1)',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start',
-                  }}
-                  onPress={() => {
-                    setSelectedRating('quick_response');
-                    setModalVisible(false);
-                    getFilteredPosts(route?.params?.selectedcategory, 'quick_response');
-                  }}
-                >
-                  <Octicons
-                    name={'star-fill'}
-                    size={22}
-                    color={isDark ? 'rgba(255, 255, 255, 1)' : 'rgba(94, 95, 96, 1)'}
-                  />
                   <Text
                     style={[
-                      styles.bigText,
-                      {
-                        fontSize: 16,
-                        fontWeight: 'bold',
-                        marginLeft: 6,
-                        color: isDark ? 'rgba(255, 255, 255, 1)' : 'rgb(0, 0, 0)',
-                      },
-                    ]}
-                  >
-                    Quick Response
+                      styles.distanceValue,
+                      {color: isDark ? '#fff' : '#111', marginTop: 24},
+                    ]}>
+                    {distance} km
                   </Text>
-                </TouchableOpacity>
-              </View>
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: 'lightgrey',
-                  width: Width * 0.9,
-                  alignSelf: 'center',
-                  borderRadius: 10,
-                  margin: 18,
-                  marginTop: 18,
-                }}
-              />
-              <Text
-                style={[
-                  styles.bigText,
-                  {
-                    fontSize: 17,
-                    fontWeight: 'bold',
-                    alignSelf: 'flex-start',
-                    color: isDark ? 'rgba(255, 255, 255, 1)' : 'rgb(0, 0, 0)',
-                  },
-                ]}
-              >
-                Rating
-              </Text>
-              <RatingButtons
-                onSelectRating={rating => {
-                  setSelectedRating(rating);
-                  getFilteredPosts(route?.params?.selectedcategory, rating);
-                }}
-              />
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: 'lightgrey',
-                  width: Width * 0.9,
-                  alignSelf: 'center',
-                  borderRadius: 10,
-                  margin: 15,
-                }}
-              />
-              <Text
-                style={[
-                  styles.bigText,
-                  {
-                    fontSize: 17,
-                    fontWeight: 'bold',
-                    alignSelf: 'flex-start',
-                    color: isDark ? 'rgba(255, 255, 255, 1)' : 'rgb(0, 0, 0)',
-                  },
-                ]}
-              >
-                Distance to me
-              </Text>
-              <SliderContainer sliderValue={value}>
+                </View>
                 <Slider
-                  animateTransitions
-                  trackStyle={{
-                    width: Width * 0.9,
-                    backgroundColor: 'rgba(228, 228, 228, 1)',
+                  minimumValue={1}
+                  maximumValue={100}
+                  step={1}
+                  value={distance}
+                  onSlidingComplete={setDistance}
+                  trackStyle={{height: 4, borderRadius: 4}}
+                  minimumTrackStyle={{backgroundColor: '#00AEEF'}}
+                  maximumTrackStyle={{
+                    backgroundColor: isDark ? '#2a2a2a' : '#eee',
                   }}
                   thumbStyle={{
-                    backgroundColor: 'white',
-                    borderWidth: 5,
-                    borderColor: '#00AEEF',
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: '#00AEEF',
                   }}
-                  minimumTrackStyle={{ backgroundColor: '#00AEEF' }}
-                  minimumValue={0}
-                  maximumValue={5}
-                  step={1}
-                  thumbTintColor="#00AEEF"
-                  onValueChange={setValue}
                 />
-              </SliderContainer>
-              <TouchableOpacity
-                style={styles.blueBotton}
-                onPress={() => {
-                  setModalVisible(false);
-                  getFilteredPosts(route?.params?.selectedcategory, selectedRating, value);
-                }}
-              >
+
+                {/* Location */}
                 <Text
                   style={[
-                    styles.smallText,
-                    { color: '#fff', fontSize: 22, marginBottom: 0 },
-                  ]}
-                >
-                  Apply
+                    styles.sectionLabel,
+                    {color: '#8a8a8a', marginTop: 24},
+                  ]}>
+                  LOCATION
                 </Text>
+                <View style={styles.chipRow}>
+                  {availableLocations.length === 0 ? (
+                    <Text
+                      style={{color: isDark ? '#777' : '#999', fontSize: 13}}>
+                      No locations available yet
+                    </Text>
+                  ) : (
+                    availableLocations.map(loc => {
+                      const isSelected = selectedLocations.includes(loc);
+                      return (
+                        <TouchableOpacity
+                          key={loc}
+                          onPress={() => toggleLocation(loc)}
+                          style={[
+                            styles.locationChip,
+                            {
+                              borderColor: isSelected
+                                ? '#00AEEF'
+                                : isDark
+                                ? '#333'
+                                : '#e5e5e5',
+                              backgroundColor: isSelected
+                                ? 'rgba(0, 174, 239, 0.12)'
+                                : 'transparent',
+                            },
+                          ]}>
+                          <Text
+                            style={[
+                              styles.chipText,
+                              {
+                                color: isSelected
+                                  ? '#00AEEF'
+                                  : isDark
+                                  ? '#ddd'
+                                  : '#333',
+                              },
+                            ]}>
+                            {loc}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={() => {
+                  setModalVisible(false);
+                  getFilteredShops(
+                    route?.params?.selectedcategory,
+                    selectedRating,
+                    distance,
+                  );
+                }}>
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
               </TouchableOpacity>
-            </View>
+            </Pressable>
           </Pressable>
         </Modal>
       </View>
@@ -720,49 +739,111 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
   },
-  thumb: {
-    backgroundColor: '#31a4db',
-    borderRadius: 10 / 2,
-    height: 10,
-    shadowColor: '#31a4db',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 2,
-    width: 10,
-  },
-  track: {
-    backgroundColor: '#303030',
-    height: 2,
-  },
-  blueBotton: {
-    backgroundColor: '#00AEEF',
-    width: '100%',
-    height: 56,
-    borderRadius: 10,
-    margin: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   modalContainer: {
     width: Width,
     height: Height,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   modalContent: {
-    borderRadius: 60,
-    padding: 20,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 24,
     width: Width,
-    height: Height * 0.65,
-    borderBottomEndRadius: 0,
-    borderBottomLeftRadius: 0,
-    backgroundColor: 'white',
+    maxHeight: Height * 0.82,
+  },
+  modalHandle: {
+    height: 4,
+    width: 40,
+    backgroundColor: '#d0d0d0',
+    borderRadius: 4,
+    alignSelf: 'center',
+    marginBottom: 18,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    marginBottom: 18,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  resetText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#00AEEF',
+  },
+  modalScroll: {
+    width: '100%',
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    marginBottom: 10,
+  },
+  sectionRowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  distanceValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  chipActive: {
+    borderColor: '#00AEEF',
+    backgroundColor: 'rgba(0, 174, 239, 0.12)',
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  chipTextActive: {
+    color: '#00AEEF',
+  },
+  locationChip: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  applyButton: {
+    backgroundColor: '#00AEEF',
+    width: '100%',
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   rectangle2: {
     backgroundColor: 'rgb(255, 255, 255)',
@@ -803,9 +884,5 @@ const styles = StyleSheet.create({
   recListText: {
     fontSize: 12,
     fontWeight: '400',
-  },
-  sliderContainer: {
-    width: Width * 0.9,
-    alignItems: 'center',
   },
 });

@@ -94,7 +94,13 @@ const Messages = ({navigation}) => {
       isFetchingRef.current = false;
 
       if (response?.data && Array.isArray(response.data)) {
-        setChatListData(response.data);
+        const uniqueChats = [
+          ...new Map(
+            response.data.map(chat => [chat.chatWithUser._id, chat]),
+          ).values(),
+        ];
+
+        setChatListData(uniqueChats);
       } else {
         setChatListData([]);
       }
@@ -146,11 +152,11 @@ const Messages = ({navigation}) => {
 
     console.log('🔄 Screen focused');
 
-    if (userdata?.role === 'buyer') {
-      getFilteredPosts();
-    } else {
-      getBuyersList();
-    }
+    // if (userdata?.role === 'buyer') {
+    //   getFilteredPosts();
+    // } else {
+    //   getBuyersList();
+    // }
 
     fetchChatList();
 

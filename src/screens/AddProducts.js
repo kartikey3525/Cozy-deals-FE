@@ -46,6 +46,8 @@ export default function AddProducts({navigation, route}) {
     createSellerProducts,
     updateProduct,
     Userfulldata,
+    location,
+    setLocation,
   } = useContext(AuthContext);
   const {media, selectMedia, setMedia, isLoading} = useImagePicker1();
   const isFocused = useIsFocused();
@@ -150,6 +152,13 @@ export default function AddProducts({navigation, route}) {
   };
 
   const handleAddProduct = () => {
+    if (!location?.latitude || !location?.longitude) {
+      Alert.alert(
+        'Location not available',
+        'Please wait for your current location to be detected.',
+      );
+      return;
+    }
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -174,6 +183,9 @@ export default function AddProducts({navigation, route}) {
       title: trimmedName,
       images: [media],
       categories: selectedCategories,
+
+      latitude: location?.latitude,
+      longitude: location?.longitude,
     };
 
     if (editingIndex !== null) {

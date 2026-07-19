@@ -5,6 +5,7 @@ import messaging from '@react-native-firebase/messaging';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
 import axios from 'axios';
+import {getDistance} from 'geolib';
 import {createContext, useEffect, useState} from 'react';
 import {
   Alert,
@@ -14,8 +15,8 @@ import {
   Platform,
 } from 'react-native';
 import io from 'socket.io-client';
-// const API_URL = 'http://10.0.2.2:8080';
-const API_URL = 'https://cozy-deals-be-production.up.railway.app';
+const API_URL = 'http://10.0.2.2:8080';
+// const API_URL = 'https://cozy-deals-be-production.up.railway.app';
 
 const AuthContext = createContext();
 
@@ -96,6 +97,9 @@ const AuthProvider = ({children}) => {
   const [recentPosts, setrecentPosts] = useState([]);
   const [nearbyPosts, setnearbyPosts] = useState([]);
   const [filteredPosts, setfilteredPosts] = useState([]);
+  const [filteredShops, setfilteredShops] = useState([]);
+  const [allShops, setAllShops] = useState([]);
+
   const [singleShop, setSingleShop] = useState([]);
   const [buyerList, setbuyerList] = useState([]);
   const [shopRating, setShopRating] = useState([]);
@@ -440,7 +444,8 @@ const AuthProvider = ({children}) => {
         ['userData', JSON.stringify(user)],
         ['selectedUserRole', userRole],
       ]);
-      navigation.navigate('AddressScreen');
+      // navigation.navigate('AddressScreen');
+      navigation.navigate('BottomTabs');
     } catch (error) {
       handleApiError(error, 'Invalid OTP or password.');
     }
@@ -561,18 +566,42 @@ const AuthProvider = ({children}) => {
     }
   };
 
+  const isWithinRadius = (itemLatitude, itemLongitude) => {
+    if (!location) return true;
+
+    const distance = getDistance(
+      {
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+      },
+      {
+        latitude: Number(itemLatitude),
+        longitude: Number(itemLongitude),
+      },
+    );
+
+    return distance <= 50000;
+  };
+
   // Post Functions
   const getPosts = async (category = null) => {
     try {
       const url = category
-        ? `/api/requirementPost/getRequirement?category=${encodeURIComponent(
-            category.trim(),
-          )}`
+        ? `/api/requirementPost/getRequirement?category=${
+            encodeURIComponent()
+            // category.trim(),
+          }`
         : '/api/requirementPost/getRequirement';
       const response = await apiClient.get(url, {
         headers: getAuthHeaders(userdata?.token),
       });
-      setposts(response.data.data);
+      // setposts(response.data.data);
+      console.log('setposts', response.data.data);
+      const filtered = response.data.data.filter(post =>
+        isWithinRadius(post.latitude, post.longitude),
+      );
+
+      setposts(filtered);
     } catch (error) {
       handleApiError(error, 'Failed to load posts.');
     }
@@ -583,7 +612,18 @@ const AuthProvider = ({children}) => {
       const response = await apiClient.get('/api/buyer/post/recentPosts', {
         headers: getAuthHeaders(userdata?.token),
       });
-      setrecentPosts(response.data.data);
+      // setrecentPosts(response.data.data);
+      console.log('setrecentPosts', response.data.data);
+
+      if (!location) {
+        setrecentPosts(response.data.data);
+        return;
+      }
+
+      const filtered = response.data.data.filter(post =>
+        isWithinRadius(post.latitude, post.longitude),
+      );
+      setrecentPosts(filtered);
     } catch (error) {
       handleApiError(error, 'Failed to load recent posts.');
     }
@@ -593,9 +633,9 @@ const AuthProvider = ({children}) => {
     try {
       const payload = {
         startDistance: '',
-        endDistance: '33',
-        latitude: '40.758896',
-        longitude: '-73.985130',
+        endDistance: '',
+        latitude: location?.latitude,
+        longitude: location?.longitude,
         rating: 2,
         topRated: true,
         key: '',
@@ -610,9 +650,165 @@ const AuthProvider = ({children}) => {
           headers: getAuthHeaders(userdata?.token),
         },
       );
-      setnearbyPosts(response.data.data);
+      // setnearbyPosts(response.data.data);
+      console.log('setnearbyPosts', response.data.data);
+
+      if (!location) {
+        setnearbyPosts(response.data.data);
+        return;
+      }
+
+      const filtered = response.data.data.filter(post =>
+        isWithinRadius(post.latitude, post.longitude),
+      );
+
+      setnearbyPosts(filtered);
     } catch (error) {
       handleApiError(error, 'Failed to load nearby posts.');
+    }
+  };
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const toRad = value => (value * Math.PI) / 180;
+
+    const R = 6371;
+
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  };
+
+  const applyShopFilters = (
+    shops,
+    categories,
+    rating,
+    distance,
+    sortBy = 'rating',
+    selectedLocations = [], // NEW
+  ) => {
+    let filtered = [...shops];
+
+    // Category filter
+    const selectedCategories = Array.isArray(categories)
+      ? categories
+      : categories
+      ? [categories]
+      : [];
+
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(shop => {
+        const sellerCategories = (shop.selectedCategories || []).map(c =>
+          c.toLowerCase(),
+        );
+
+        return sellerCategories.some(category =>
+          selectedCategories.map(c => c.toLowerCase()).includes(category),
+        );
+      });
+    }
+
+    // Rating filter
+    if (rating !== null && typeof rating === 'number') {
+      filtered = filtered.filter(
+        shop => Number(shop.averageRating || 0) >= rating,
+      );
+    }
+
+    // Distance filter
+    if (distance !== null) {
+      filtered = filtered.filter(shop => {
+        if (shop.distance == null) {
+          return true;
+        }
+
+        return shop.distance <= distance;
+      });
+    }
+
+    // NEW: Multi-location filter (matches on city, falls back gracefully)
+    if (Array.isArray(selectedLocations) && selectedLocations.length > 0) {
+      const normalizedLocations = selectedLocations.map(l => l.toLowerCase());
+      filtered = filtered.filter(shop => {
+        let city = shop.location?.city;
+        if (!city && shop.businessAddress) {
+          const parts = shop.businessAddress.split(',').map(p => p.trim());
+          city = parts[0];
+        }
+        return city && normalizedLocations.includes(city.toLowerCase());
+      });
+    }
+
+    switch (sortBy) {
+      case 'distance':
+        filtered.sort(
+          (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity),
+        );
+        break;
+
+      case 'rating':
+      default:
+        filtered.sort((a, b) => b.averageRating - a.averageRating);
+    }
+
+    return filtered;
+  };
+
+  const getFilteredShops = async (
+    categories = [],
+    ratingFilter = null,
+    distanceFilter = null,
+  ) => {
+    try {
+      const response = await apiClient.get('/api/user/getAllProfile', {
+        headers: getAuthHeaders(userdata?.token),
+      });
+
+      let shops = (response.data.data || [])
+        .filter(user => {
+          return (
+            (user.roleId === 1 || user.role === 'seller') &&
+            user._id !== userdata?._id &&
+            !user.isDeleted &&
+            !user.isDeactivated
+          );
+        })
+        .map(shop => ({
+          ...shop,
+          averageRating: Number(shop.averageRating || 0),
+
+          distance:
+            location && shop.latitude && shop.longitude
+              ? calculateDistance(
+                  Number(location.latitude),
+                  Number(location.longitude),
+                  Number(shop.latitude),
+                  Number(shop.longitude),
+                )
+              : null,
+
+          isOpen: true,
+          isFavorite: false,
+        }));
+
+      const filtered = applyShopFilters(
+        shops,
+        categories,
+        ratingFilter,
+        distanceFilter,
+      );
+
+      setAllShops(shops);
+      setfilteredShops(filtered);
+      console.log('filteredShops', filtered);
+    } catch (error) {
+      handleApiError(error, 'Failed to load filtered Shops.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -666,9 +862,9 @@ const AuthProvider = ({children}) => {
         description,
         contactNumber: phone,
         contactEmail: email,
-        location: 'New York, NY',
-        latitude: location.latitude,
-        longitude: location.longitude,
+        location: location,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
         locationUrl: 'https://maps.google.com/?q=New+York',
       };
       await apiClient.post('/api/requirementPost/postRequirement', payload, {
@@ -727,9 +923,9 @@ const AuthProvider = ({children}) => {
 
   // Shop and Rating Functions
   const getSingleShop = async userId => {
-    setSingleShop([]);
+    setSingleShop({});
     try {
-      const response = await apiClient.get('/api/user/getAllProfile', {
+      const response = await apiClient.get('/api/user/getAllProfile?roleId=1', {
         headers: getAuthHeaders(userdata?.token),
       });
       const shop = response.data.data.find(s => s._id === userId);
@@ -867,6 +1063,8 @@ const AuthProvider = ({children}) => {
         openTime: openAt,
         closeTime: closeAt,
         fcmToken,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
       };
       await apiClient.put('/api/user/updateProfile', payload, {
         headers: getAuthHeaders(userdata?.token),
@@ -1051,20 +1249,44 @@ const AuthProvider = ({children}) => {
 
   const getBuyersList = async () => {
     try {
-      const response = await apiClient.get('/api/user/getAllProfile', {
+      const response = await apiClient.get('/api/user/getAllProfile?roleId=0', {
         headers: getAuthHeaders(userdata?.token),
       });
+      const allUsers = response.data?.data || [];
 
-      const buyers = (response.data.data || []).filter(user => {
-        return (
-          (user.role === 'buyer' || user.roleId === 0) &&
-          user._id !== userdata?._id
-        );
+      // Logged in user role
+      const myRole =
+        userdata?.role?.toLowerCase() ??
+        (userdata?.roleId === 0 ? 'buyer' : 'seller');
+
+      const filteredUsers = allUsers.filter(user => {
+        // Skip myself
+        if (user._id === userdata?._id) return false;
+
+        const userRole =
+          user.role?.toLowerCase() ?? (user.roleId === 0 ? 'buyer' : 'seller');
+
+        // Seller should only see buyers
+        if (myRole === 'seller') {
+          return userRole === 'buyer';
+        }
+
+        // Buyer should only see sellers
+        if (myRole === 'buyer') {
+          return userRole === 'seller';
+        }
+
+        return false;
       });
 
-      setbuyerList(buyers);
+      // Remove duplicates
+      const uniqueUsers = [
+        ...new Map(filteredUsers.map(item => [item._id, item])).values(),
+      ];
+
+      setbuyerList(uniqueUsers);
     } catch (error) {
-      handleApiError(error, 'Failed to load buyers list.');
+      handleApiError(error, 'Failed to load users list.');
     }
   };
 
@@ -1259,6 +1481,8 @@ const AuthProvider = ({children}) => {
         isposting,
         getFilteredPosts,
         filteredPosts,
+        getFilteredShops,
+        filteredShops,
         getPostsHistory,
         PostsHistory,
         PostReportissue,
@@ -1302,6 +1526,10 @@ const AuthProvider = ({children}) => {
         socket,
         requestAndroidPermissions,
         PostRatingUpdate,
+        getFilteredShops,
+        applyShopFilters,
+        setfilteredShops,
+        calculateDistance,
       }}>
       {children}
     </AuthContext.Provider>

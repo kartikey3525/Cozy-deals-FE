@@ -193,7 +193,7 @@ const ChatScreen = ({navigation, route}) => {
           updatedMessages[existingIndex] = {
             ...updatedMessages[existingIndex],
             ...message,
-            status: 'delivered',
+            status: message.readBy?.length > 0 ? 'read' : 'delivered',
           };
 
           return updatedMessages;
@@ -219,21 +219,23 @@ const ChatScreen = ({navigation, route}) => {
     };
 
     const handleMessageRead = response => {
+      const {messageId, clientMessageId, readBy} = response;
+
       setMessages(previous =>
         previous.map(message => {
-          if (String(message.senderId) === String(userId)) {
-            return {
-              ...message,
-              readBy: [
-                {
-                  status: 'read',
-                },
-              ],
-              status: 'read',
-            };
+          const matched =
+            String(message._id) === String(messageId) ||
+            message.clientMessageId === clientMessageId;
+
+          if (!matched) {
+            return message;
           }
 
-          return message;
+          return {
+            ...message,
+            status: 'read',
+            readBy,
+          };
         }),
       );
     };
@@ -590,10 +592,13 @@ const ChatScreen = ({navigation, route}) => {
   };
 
   const isMessageRead = message => {
-    if (!message.readBy) return false;
+    if (!Array.isArray(message.readBy)) {
+      return false;
+    }
 
     return message.readBy.some(
-      read => String(read.userId) !== String(userId) && read.status === 'read',
+      item =>
+        String(item.userId) === String(recipientId) && item.status === 'read',
     );
   };
 

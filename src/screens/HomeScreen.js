@@ -221,10 +221,7 @@ export default function HomeScreen({navigation}) {
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
-    if (!isFocused || !userRole) {
-      return;
-    }
-
+    if (!location) return;
     if (userRole === 'buyer') {
       getCategories();
       getRecentPosts();
@@ -236,7 +233,7 @@ export default function HomeScreen({navigation}) {
 
     getNotification();
     getUserData();
-  }, [isFocused, userRole]);
+  }, [isFocused, userRole, location]);
 
   useEffect(() => {
     setFilteredLists(
@@ -381,12 +378,13 @@ export default function HomeScreen({navigation}) {
                   numberOfLines={1}
                   style={{
                     fontSize: 12,
-                    fontWeight: 'bold',
+                    fontWeight: '600',
                     width: Width * 0.53,
                     marginTop: 6,
-                    color: isDark ? 'rgba(94, 95, 96, 1)' : '#000',
+                    color: isDark ? 'rgba(94,95,96,1)' : '#000',
                   }}>
-                  Latitude: {location.latitude}, Longitude: {location.longitude}
+                  📍 {location?.city}
+                  {location?.state ? `, ${location.state}` : ''}
                 </Text>
               ) : (
                 <Text

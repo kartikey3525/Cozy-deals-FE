@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import {PermissionsAndroid, Alert, Platform, Linking} from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import {useEffect} from 'react';
+import {Alert, Linking, PermissionsAndroid, Platform} from 'react-native';
+import {getPlaceName} from './locationHelper';
 
 const LocationPermission = ({setLocation}) => {
   useEffect(() => {
@@ -54,11 +55,23 @@ const LocationPermission = ({setLocation}) => {
 
   const getLocation = async (retryCount = 0) => {
     Geolocation.getCurrentPosition(
-      position => {
+      async position => {
         const {latitude, longitude} = position.coords;
-        setLocation({latitude, longitude});
-        console.log('User location:', latitude, longitude);
+
+        const place = await getPlaceName(latitude, longitude);
+
+        console.log('Resolved Location:', place, latitude, longitude);
+
+        setLocation({
+          latitude,
+          longitude,
+          city: place.city,
+          state: place.state,
+          country: place.country,
+          address: place.fullAddress,
+        });
       },
+
       error => {
         console.error('Location error:', error);
 
@@ -68,25 +81,33 @@ const LocationPermission = ({setLocation}) => {
           return;
         }
 
-        // Fallback to network-based location
         if (error.code === 2 || error.code === 3) {
           console.log('Falling back to network-based location...');
+
           Geolocation.getCurrentPosition(
-            position => {
+            async position => {
               const {latitude, longitude} = position.coords;
-              setLocation({latitude, longitude});
-              console.log(
-                'User location (network-based):',
+
+              const place = await getPlaceName(latitude, longitude);
+
+              console.log('Resolved Fallback Location:', place);
+
+              setLocation({
                 latitude,
                 longitude,
-              );
+                city: place.city,
+                state: place.state,
+                country: place.country,
+                address: place.fullAddress,
+              });
             },
+
             fallbackError => {
               console.error('Fallback location error:', fallbackError);
-              // Alert.alert('Error', 'Unable to fetch location.');
             },
+
             {
-              enableHighAccuracy: false, // Use network-based location
+              enableHighAccuracy: false,
               timeout: 10000,
               maximumAge: 0,
             },
@@ -95,8 +116,9 @@ const LocationPermission = ({setLocation}) => {
           Alert.alert('Error', error.message);
         }
       },
+
       {
-        enableHighAccuracy: true, // Try GPS first
+        enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
       },

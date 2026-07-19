@@ -1,30 +1,27 @@
+import {useIsFocused} from '@react-navigation/native';
+import React, {useContext, useEffect, useRef, useState} from 'react';
 import {
-  View,
-  Text,
+  Alert,
+  Dimensions,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Alert,
-  Platform,
-  ScrollView,
-  PermissionsAndroid,
+  View,
 } from 'react-native';
-import React, { useContext, useEffect, useState, useRef } from 'react';
-import { HelperText } from 'react-native-paper';
-import { AuthContext } from '../context/authcontext';
-import { Dimensions } from 'react-native';
-import Dropdown from '../components/Dropdown';
+import {HelperText} from 'react-native-paper';
 import PhoneInput from 'react-native-phone-number-input';
-import { useIsFocused } from '@react-navigation/native';
-import { ThemeContext } from '../context/themeContext';
+import Dropdown from '../components/Dropdown';
 import Header from '../components/Header';
-import Geolocation from '@react-native-community/geolocation';
 import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
+import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
 
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
 
-export default function PostDetails({ navigation, route }) {
+export default function PostDetails({navigation, route}) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [description, setDescription] = useState('');
@@ -34,10 +31,11 @@ export default function PostDetails({ navigation, route }) {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const phoneInput = useRef(null);
   const isFocused = useIsFocused();
-  const { theme } = useContext(ThemeContext);
+  const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
 
-  const { getCategories, fullCategorydata, location, setLocation, Userfulldata } = useContext(AuthContext);
+  const {getCategories, fullCategorydata, location, setLocation, Userfulldata} =
+    useContext(AuthContext);
 
   const post = route?.params?.item || null;
   const isEditMode = !!post;
@@ -177,10 +175,10 @@ export default function PostDetails({ navigation, route }) {
     return valid;
   };
 
-  const handleCategoryChange = (value) => {
+  const handleCategoryChange = value => {
     setSelectedCategories(value);
     if (value.length > 0) {
-      setErrors((prev) => ({ ...prev, category: '' }));
+      setErrors(prev => ({...prev, category: ''}));
     }
   };
 
@@ -200,7 +198,7 @@ export default function PostDetails({ navigation, route }) {
           'Location Required',
           'This app needs location access to proceed. Please grant permission.',
           [
-            { text: 'Cancel', style: 'cancel' },
+            {text: 'Cancel', style: 'cancel'},
             {
               text: 'Grant Permission',
               onPress: async () => {
@@ -211,7 +209,7 @@ export default function PostDetails({ navigation, route }) {
               },
             },
           ],
-          { cancelable: false },
+          {cancelable: false},
         );
       }
       return;
@@ -231,10 +229,10 @@ export default function PostDetails({ navigation, route }) {
         selectedCategories,
         location,
       };
-console.log('first', postData);
+      console.log('first', postData);
       navigation.navigate('uploadimage', {
         postData,
-        ...(isEditMode && { postId: post._id, item: post }),
+        ...(isEditMode && {postId: post._id, item: post}),
       });
     } catch (error) {
       console.error('Navigation error:', error);
@@ -247,14 +245,16 @@ console.log('first', postData);
   return (
     <KeyboardAvoidingContainer>
       <ScrollView
-        contentContainerStyle={[styles.screen, { backgroundColor: isDark ? '#000' : '#fff' }]}
-      >
+        contentContainerStyle={[
+          styles.screen,
+          {backgroundColor: isDark ? '#000' : '#fff'},
+        ]}>
         <Header header={isEditMode ? 'Edit Post Details' : 'Post Details'} />
 
         {/* Categories Dropdown */}
         <Dropdown
           item={
-            fullCategorydata?.map((category) => ({
+            fullCategorydata?.map(category => ({
               label: category.name || 'Unnamed',
               value: category.name || '',
             })) || []
@@ -267,7 +267,10 @@ console.log('first', postData);
           selectedValues={selectedCategories}
           onChangeValue={handleCategoryChange}
         />
-        <HelperText type="error" visible={!!errors.category} style={styles.errorText}>
+        <HelperText
+          type="error"
+          visible={!!errors.category}
+          style={styles.errorText}>
           {errors.category}
         </HelperText>
 
@@ -283,8 +286,7 @@ console.log('first', postData);
                 ? 'rgba(173, 173, 173, 0.31)'
                 : 'rgba(173, 173, 173, 0.31)',
             },
-          ]}
-        >
+          ]}>
           <TextInput
             value={name}
             style={[
@@ -294,16 +296,19 @@ console.log('first', postData);
                 backgroundColor: isDark ? '#000' : '#fff',
               },
             ]}
-            onChangeText={(text) => {
+            onChangeText={text => {
               setName(text);
-              if (text.trim()) setErrors((prev) => ({ ...prev, name: '' }));
+              if (text.trim()) setErrors(prev => ({...prev, name: ''}));
             }}
             placeholder="Product name"
             placeholderTextColor={isDark ? '#fff' : 'black'}
             autoCapitalize="none"
           />
         </View>
-        <HelperText type="error" visible={!!errors.name} style={styles.errorText}>
+        <HelperText
+          type="error"
+          visible={!!errors.name}
+          style={styles.errorText}>
           {errors.name}
         </HelperText>
 
@@ -319,8 +324,7 @@ console.log('first', postData);
                 ? 'rgba(173, 173, 173, 0.31)'
                 : 'rgba(173, 173, 173, 0.31)',
             },
-          ]}
-        >
+          ]}>
           <TextInput
             value={email}
             style={[
@@ -330,9 +334,9 @@ console.log('first', postData);
                 backgroundColor: isDark ? '#000' : '#fff',
               },
             ]}
-            onChangeText={(text) => {
+            onChangeText={text => {
               setEmail(text);
-              if (text.trim()) setErrors((prev) => ({ ...prev, email: '' }));
+              if (text.trim()) setErrors(prev => ({...prev, email: ''}));
             }}
             placeholder="Email"
             placeholderTextColor={isDark ? '#fff' : 'black'}
@@ -340,7 +344,10 @@ console.log('first', postData);
             autoCapitalize="none"
           />
         </View>
-        <HelperText type="error" visible={!!errors.email} style={styles.errorText}>
+        <HelperText
+          type="error"
+          visible={!!errors.email}
+          style={styles.errorText}>
           {errors.email}
         </HelperText>
 
@@ -382,13 +389,16 @@ console.log('first', postData);
           }}
           defaultCode="IN"
           layout="second"
-          onChangeText={(text) => setPhone(text || '')}
-          onChangeFormattedText={(text) => setFormattedPhone(text || '')}
+          onChangeText={text => setPhone(text || '')}
+          onChangeFormattedText={text => setFormattedPhone(text || '')}
           textInputProps={{
             selectionColor: isDark ? '#fff' : '#000',
           }}
         />
-        <HelperText type="error" visible={!!errors.phone} style={styles.errorText}>
+        <HelperText
+          type="error"
+          visible={!!errors.phone}
+          style={styles.errorText}>
           {errors.phone}
         </HelperText>
 
@@ -403,13 +413,15 @@ console.log('first', postData);
                 ? 'rgba(173, 173, 173, 0.31)'
                 : 'rgba(173, 173, 173, 0.31)',
             },
-          ]}
-        >
-          <Text style={[styles.locationText, { color: isDark ? '#fff' : '#000' }]}>
+          ]}>
+          <Text
+            style={[styles.locationText, {color: isDark ? '#fff' : '#000'}]}>
             {location
               ? isEditMode
-                ? `${post.location || 'Unknown'} (Lat: ${location.latitude}, Lon: ${location.longitude})`
-                : `Current location (Lat: ${location.latitude}, Lon: ${location.longitude})`
+                ? `${post.city || 'Unknown'} (${location?.city},${
+                    location?.state
+                  })`
+                : `Current location :(${location?.city},${location?.state})`
               : 'Select Location'}
           </Text>
           {/* {!isEditMode && (
@@ -421,7 +433,10 @@ console.log('first', postData);
             </TouchableOpacity>
           )} */}
         </View>
-        <HelperText type="error" visible={!!errors.location} style={styles.errorText}>
+        <HelperText
+          type="error"
+          visible={!!errors.location}
+          style={styles.errorText}>
           {errors.location}
         </HelperText>
 
@@ -436,8 +451,7 @@ console.log('first', postData);
                 ? 'rgba(173, 173, 173, 0.31)'
                 : 'rgba(173, 173, 173, 0.31)',
             },
-          ]}
-        >
+          ]}>
           <TextInput
             value={description}
             style={[
@@ -447,9 +461,9 @@ console.log('first', postData);
                 backgroundColor: isDark ? '#000' : '#fff',
               },
             ]}
-            onChangeText={(text) => {
+            onChangeText={text => {
               setDescription(text);
-              if (text.trim()) setErrors((prev) => ({ ...prev, description: '' }));
+              if (text.trim()) setErrors(prev => ({...prev, description: ''}));
             }}
             placeholder="Product description"
             placeholderTextColor={isDark ? '#fff' : 'black'}
@@ -457,7 +471,10 @@ console.log('first', postData);
             numberOfLines={8}
           />
         </View>
-        <HelperText type="error" visible={!!errors.description} style={styles.errorText}>
+        <HelperText
+          type="error"
+          visible={!!errors.description}
+          style={styles.errorText}>
           {errors.description}
         </HelperText>
 
@@ -465,10 +482,9 @@ console.log('first', postData);
         <TouchableOpacity
           style={styles.nextButton}
           onPress={handlePress}
-          disabled={isLoading}
-        >
+          disabled={isLoading}>
           <Text style={styles.nextButtonText}>
-            {isLoading ? 'Processing...' :  'Next'}
+            {isLoading ? 'Processing...' : 'Next'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

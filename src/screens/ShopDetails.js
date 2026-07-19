@@ -30,7 +30,7 @@ export default function ShopDetails({navigation, route}) {
   const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
 
-  const [Data, setData] = useState([]);
+  const [Data, setData] = useState({});
   const isFocused = useIsFocused();
   const {
     shopRating,
@@ -80,25 +80,30 @@ export default function ShopDetails({navigation, route}) {
   };
 
   useEffect(() => {
-    if (userId) {
-      // console.log('userId', route?.params?.item);
-      if (
-        !route?.params?.item?.categoriesPost ||
-        route?.params?.item?.categoriesPost.length === 0
-      ) {
-        getSingleShop(userId);
-      }
-      getShopRating(userId);
+    if (!userId) return;
+
+    if (
+      !route?.params?.item?.categoriesPost ||
+      route?.params?.item?.categoriesPost.length === 0
+    ) {
+      getSingleShop(userId);
     }
-  }, [isFocused]);
+
+    getShopRating(userId);
+  }, [userId, isFocused]);
 
   useEffect(() => {
-    if (route?.params?.item?.categoriesPost?.length > 0) {
-      setData(route.params.item);
-    } else if (singleShop && Object.keys(singleShop).length > 0) {
+    const currentItem = route?.params?.item;
+
+    // clear previous seller immediately
+    setData({});
+
+    if (currentItem?.categoriesPost?.length > 0) {
+      setData(currentItem);
+    } else if (singleShop && currentItem?.userId === singleShop?._id) {
       setData(singleShop);
     }
-  }, [singleShop]);
+  }, [route?.params?.item, singleShop]);
 
   const handleLike = postId => {
     // console.log('postId,userId', postId,userId);

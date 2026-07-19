@@ -1,31 +1,29 @@
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Pressable,
-  Modal,
-  ActivityIndicator,
-} from 'react-native';
-import React, {
-  useContext,
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-} from 'react';
-import {HelperText} from 'react-native-paper';
-import {AuthContext} from '../context/authcontext';
-import {Dimensions} from 'react-native';
-import Entypo from 'react-native-vector-icons/Entypo';
 import {useIsFocused} from '@react-navigation/native';
-import {ThemeContext} from '../context/themeContext';
-import DatePicker from 'react-native-date-picker';
-import Header from '../components/Header';
-import useImagePicker from '../hooks/useImagePicker';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {HelperText} from 'react-native-paper';
+import Entypo from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
+import useImagePicker from '../hooks/useImagePicker';
 
 const {width: Width, height: Height} = Dimensions.get('window');
 
@@ -230,7 +228,6 @@ export default function ProfileSettings({navigation, route}) {
             {renderInfoRow('Owner name', shopData?.ownerName)}
             {renderInfoRow('Average rating', shopData?.averageRating)}
 
-
             {renderInfoRow(
               'Year of Establishment',
               shopData?.establishmentYear,
@@ -251,7 +248,7 @@ export default function ProfileSettings({navigation, route}) {
             )}
             {renderInfoRow(
               'Location',
-              location&& `Lat: ${location.latitude}, Long: ${location.longitude}`,
+              location && `${location?.city},${location?.state}`,
               true,
             )}
             {renderInfoRow('Shop About', shopData?.description, true)}
