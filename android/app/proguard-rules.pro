@@ -1,10 +1,84 @@
-# Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in /usr/local/Cellar/android-sdk/24.3.3/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+###############################################
+# React Native Production Rules
+###############################################
 
-# Add any project specific keep options here:
+# Preserve stack traces
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Runtime annotations
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
+
+###############################################
+# Native Methods
+###############################################
+
+-keepclassmembers class * {
+    native <methods>;
+}
+
+###############################################
+# React Native
+###############################################
+
+-dontwarn com.facebook.react.**
+
+###############################################
+# Hermes
+###############################################
+
+-dontwarn com.facebook.hermes.**
+
+###############################################
+# JNI
+###############################################
+
+-dontwarn com.facebook.jni.**
+
+###############################################
+# Kotlin
+###############################################
+
+-dontwarn kotlin.**
+
+###############################################
+# OkHttp
+###############################################
+
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+###############################################
+# Gson
+###############################################
+
+-keep class com.google.gson.stream.** { *; }
+
+###############################################
+# Firebase
+###############################################
+
+-dontwarn com.google.firebase.**
+
+###############################################
+# Google Play Services
+###############################################
+
+-dontwarn com.google.android.gms.**
+
+###############################################
+# Keep React Native Native Methods
+###############################################
+
+-keepclassmembers,includedescriptorclasses class * {
+    native <methods>;
+}
+
+###############################################
+# Suppress harmless notes
+###############################################
+
+-dontnote **

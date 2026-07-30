@@ -20,7 +20,6 @@ import {
 } from 'react-native';
 import {HelperText} from 'react-native-paper';
 import Entypo from 'react-native-vector-icons/Entypo';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {AuthContext} from '../context/authcontext';
 import {ThemeContext} from '../context/themeContext';
 import useImagePicker from '../hooks/useImagePicker';
@@ -33,7 +32,6 @@ export default function ProfileSettings({navigation, route}) {
   const isDark = theme === 'dark';
 
   // State
-  const [modalVisible1, setModalVisible1] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [shopData, setshopData] = useState(false);
 
@@ -61,7 +59,6 @@ export default function ProfileSettings({navigation, route}) {
     getUserData,
     Userfulldata,
     userdata,
-    getSingleShop,
     singleShop,
     location,
   } = useContext(AuthContext);
@@ -106,13 +103,6 @@ export default function ProfileSettings({navigation, route}) {
   const handleEditPress = useCallback(() => {
     navigation.navigate(userRole === 'buyer' ? 'editProfile' : 'Sellerprofile');
   }, [userRole]);
-
-  const handleRemovePhoto = useCallback(() => {
-    if (media.length > 0) {
-      setMedia(media.slice(1));
-    }
-    setModalVisible1(false);
-  }, [media]);
 
   // Render functions
   const renderProfileImage = useCallback(() => {
@@ -327,76 +317,6 @@ export default function ProfileSettings({navigation, route}) {
       </Modal>
     ),
     [modalVisible, media, Userfulldata?.profile],
-  );
-
-  // const renderEditPhotoModal = useCallback(() => (
-  //   <Modal visible={modalVisible1} transparent={true}>
-  //     <Pressable
-  //       style={[
-  //         styles.modalOverlay,
-  //         {
-  //           backgroundColor: isDark
-  //             ? 'rgba(255, 255, 255, 0.19)'
-  //             : 'rgba(0, 0, 0, 0.3)',
-  //         },
-  //       ]}
-  //       onPress={() => setModalVisible1(false)}>
-  //       <View style={[styles.editModalContent, dynamicStyles.modalContent]}>
-  //         <View style={styles.modalHandle} />
-  //         <TouchableOpacity
-  //           style={[
-  //             styles.closeButton,
-  //             {backgroundColor: isDark ? 'rgba(36, 36, 36, 1)' : 'lightgrey'},
-  //           ]}
-  //           onPress={() => setModalVisible1(false)}>
-  //           <Entypo name="cross" size={22} color={isDark ? '#fff' : 'black'} />
-  //         </TouchableOpacity>
-
-  //         {renderModalOption('Take Photo', 'camera', requestCameraPermission)}
-  //         {renderModalOption('Choose from Gallery', 'image', selectMedia)}
-  //         {renderModalOption('Remove Current Photo', 'trash', handleRemovePhoto, true)}
-  //       </View>
-  //     </Pressable>
-  //   </Modal>
-  // ), [modalVisible1, isDark, dynamicStyles, handleRemovePhoto]);
-
-  const renderModalOption = (
-    text,
-    iconName,
-    onPress,
-    isDestructive = false,
-  ) => (
-    <TouchableOpacity
-      style={[styles.modalOption, dynamicStyles.borderColor]}
-      onPress={onPress}>
-      {iconName === 'image' ? (
-        <MaterialCommunityIcons
-          name={iconName}
-          size={28}
-          color={
-            isDestructive ? 'rgb(255, 0, 0)' : dynamicStyles.iconColor.color
-          }
-          style={styles.modalOptionIcon}
-        />
-      ) : (
-        <Entypo
-          name={iconName}
-          size={22}
-          color={
-            isDestructive ? 'rgb(255, 0, 0)' : dynamicStyles.iconColor.color
-          }
-          style={styles.modalOptionIcon}
-        />
-      )}
-      <Text
-        style={[
-          styles.modalOptionText,
-          isDestructive && {color: 'rgb(255, 0, 0)'},
-          !isDestructive && dynamicStyles.textColor,
-        ]}>
-        {text}
-      </Text>
-    </TouchableOpacity>
   );
 
   return (

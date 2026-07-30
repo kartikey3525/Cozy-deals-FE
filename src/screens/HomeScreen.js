@@ -222,18 +222,28 @@ export default function HomeScreen({navigation}) {
 
   useEffect(() => {
     getCategories();
-    if (!location) return;
+
+    getNotification();
+
+    getUserData();
+
     if (userRole === 'buyer') {
+      // Doesn't need GPS
       getRecentPosts();
-      getNearbyPosts();
     } else {
       getSellerCategories();
       getPosts();
     }
+  }, [isFocused, userRole]);
 
-    getNotification();
-    getUserData();
-  }, [isFocused, userRole, location]);
+  useEffect(() => {
+    if (!location) return;
+
+    if (userRole === 'buyer') {
+      // Needs GPS
+      getNearbyPosts();
+    }
+  }, [location]);
 
   useEffect(() => {
     setFilteredLists(

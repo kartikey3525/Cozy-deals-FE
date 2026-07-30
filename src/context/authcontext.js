@@ -101,6 +101,7 @@ const AuthProvider = ({children}) => {
   const [allShops, setAllShops] = useState([]);
 
   const [singleShop, setSingleShop] = useState([]);
+  const [singleProfile, setSingleProfile] = useState([]);
   const [buyerList, setbuyerList] = useState([]);
   const [shopRating, setShopRating] = useState([]);
   const [imageUrl, setimageUrl] = useState([]);
@@ -946,6 +947,17 @@ const AuthProvider = ({children}) => {
       handleApiError(error, 'Failed to load shop data.');
     }
   };
+  const getProfile = async () => {
+    try {
+      const response = await apiClient.get('/api/user/getProfile', {
+        headers: getAuthHeaders(userdata?.token),
+      });
+      console.log('getProfile =', response.data.data);
+      setSingleProfile(response.data.data);
+    } catch (error) {
+      handleApiError(error, 'Failed to load Profile data.');
+    }
+  };
 
   const getShopRating = async shopId => {
     try {
@@ -1541,6 +1553,8 @@ const AuthProvider = ({children}) => {
         applyShopFilters,
         setfilteredShops,
         calculateDistance,
+        getProfile,
+        singleProfile,
       }}>
       {children}
     </AuthContext.Provider>

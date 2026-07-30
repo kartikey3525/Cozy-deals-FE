@@ -58,20 +58,35 @@ const LocationPermission = ({setLocation}) => {
       async position => {
         const {latitude, longitude} = position.coords;
 
-        const place = await getPlaceName(latitude, longitude);
-
-        console.log('Resolved Location:', place, latitude, longitude);
-
+        // Update location immediately
         setLocation({
           latitude,
           longitude,
-          city: place.city,
-          state: place.state,
-          country: place.country,
-          address: place.fullAddress,
+          city: '',
+          state: '',
+          country: '',
+          address: '',
         });
-      },
 
+        console.log('GPS Location:', latitude, longitude);
+
+        // Resolve address in background
+        getPlaceName(latitude, longitude)
+          .then(place => {
+            console.log('Resolved Location:', place);
+
+            setLocation(prev => ({
+              ...prev,
+              city: place.city,
+              state: place.state,
+              country: place.country,
+              address: place.fullAddress,
+            }));
+          })
+          .catch(err => {
+            console.log('Reverse Geocode Error:', err);
+          });
+      },
       error => {
         console.error('Location error:', error);
 
@@ -109,7 +124,7 @@ const LocationPermission = ({setLocation}) => {
             {
               enableHighAccuracy: false,
               timeout: 10000,
-              maximumAge: 0,
+              maximumAge: 300000,
             },
           );
         } else {
@@ -120,7 +135,7 @@ const LocationPermission = ({setLocation}) => {
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0,
+        maximumAge: 300000,
       },
     );
   };

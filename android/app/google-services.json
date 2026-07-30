@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "945009550802-on5htj7ppe6gqo41udk55ootopbthe3d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cozydeal",
+            "certificate_hash": "1ab0b9ff9cbb1a296de8ea49a5f8352d6920c86b"
+          }
+        },
+        {
           "client_id": "945009550802-tngsfs4c21vkp09ifircs4vk8mfa810h.apps.googleusercontent.com",
           "client_type": 3
         }

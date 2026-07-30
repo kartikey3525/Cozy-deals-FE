@@ -1,8 +1,39 @@
-pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
-plugins { id("com.facebook.react.settings") }
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
-rootProject.name = 'Cozydeal'
-include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')
-include ':react-native-vector-icons'
-project(':react-native-vector-icons').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-vector-icons/android')
+pluginManagement {
+    includeBuild("../node_modules/@react-native/gradle-plugin")
+
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id("com.facebook.react.settings")
+}
+
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+    ex.autolinkLibrariesFromCommand()
+}
+
+dependencyResolutionManagement {
+   repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        google()
+        mavenCentral()        
+       maven {
+    url = uri("https://jitpack.io")
+}
+
+    }
+}
+
+rootProject.name = "Cozydeal"
+
+include(":app")
+
+includeBuild("../node_modules/@react-native/gradle-plugin")
+
+include(":react-native-vector-icons")
+project(":react-native-vector-icons").projectDir =
+        new File(rootProject.projectDir, "../node_modules/react-native-vector-icons/android")

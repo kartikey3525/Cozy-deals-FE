@@ -29,7 +29,7 @@ export default function ProductCategories({navigation,route}) {
 
   useEffect(() => {
     // getCategories();
-    console.log('route data', route.params.item)
+    // console.log('route data', route.params.item)
   }, [isFocused]);
 
   const [categories, setCategories] = useState([]);

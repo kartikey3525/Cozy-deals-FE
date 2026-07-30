@@ -254,6 +254,7 @@ export default function AddProducts({navigation, route}) {
     <ScrollView
       keyboardShouldPersistTaps="always"
       nestedScrollEnabled
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={{
         backgroundColor: isDark ? '#000' : '#fff',
         alignItems: 'center',

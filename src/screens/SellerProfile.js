@@ -76,7 +76,6 @@ export default function SellerProfile({navigation, route}) {
     fullCategorydata,
     Userfulldata,
     userdata,
-    getSingleShop,
     singleShop,
     location,
     createSellerProfile,

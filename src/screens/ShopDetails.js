@@ -94,6 +94,7 @@ export default function ShopDetails({navigation, route}) {
 
   useEffect(() => {
     const currentItem = route?.params?.item;
+    console.log('currentItem', currentItem, userId);
 
     // clear previous seller immediately
     setData({});
@@ -156,15 +157,6 @@ export default function ShopDetails({navigation, route}) {
   const maxValue = Math.max(
     ...(shopRating?.result?.map(item => item.count) || [1]),
   );
-
-  const [recentPostList, setrecentPostList] = useState([
-    {id: 1, title: 'Samsung phone', img: require('../assets/sam-phone.png')},
-    {id: 2, title: 'smart watch', img: require('../assets/watch.png')},
-    {id: 3, title: 'Medicine', img: require('../assets/packagedfood.png')},
-    {id: 4, title: 'packaged food', img: require('../assets/clothes.png')},
-    {id: 5, title: 'Groceries', img: require('../assets/groceries.png')},
-    {id: 6, title: 'Furniture', img: require('../assets/furniture.png')},
-  ]);
 
   const dynamicRatings = sortedRatings?.map(item => ({
     value: item.rate,
