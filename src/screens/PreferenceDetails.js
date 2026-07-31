@@ -11,7 +11,6 @@ import Header from '../components/Header';
 import RatingTest from '../components/RatingTest';
 
 export default function PreferenceDetails({navigation, route}) {
-  
   const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
 
@@ -25,21 +24,6 @@ export default function PreferenceDetails({navigation, route}) {
     //   route?.params?.selectedcategory,
     // );
   }, [useIsFocused()]);
-
-  const [recentPostList, setrecentPostList] = useState([
-    {id: 1, title: 'Samsung phone', img: require('../assets/sam-phone.png')},
-    {id: 2, title: 'smart watch', img: require('../assets/watch.png')},
-    {id: 3, title: 'Medicine', img: require('../assets/packagedfood.png')},
-    {id: 4, title: 'packaged food', img: require('../assets/clothes.png')},
-    {id: 5, title: 'Groceries', img: require('../assets/groceries.png')},
-    {id: 6, title: 'Furniture', img: require('../assets/furniture.png')},
-    {id: 8, title: 'Food', img: require('../assets/food.png')},
-    {id: 7, title: 'Shoes', img: require('../assets/shoes.png')},
-    {id: 9, title: 'Home service', img: require('../assets/home-service.png')},
-    {id: 10, title: 'Hospital', img: require('../assets/hospital.png')},
-    {id: 11, title: 'Jwellery', img: require('../assets/jwelery.png')},
-    {id: 12, title: 'See more', img: require('../assets/see-more.png')},
-  ]);
 
   const render2RectangleList = ({item, index}) => {
     return (

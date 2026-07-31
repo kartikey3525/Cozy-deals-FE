@@ -28,12 +28,7 @@ const [filteredLists, setFilteredLists] = useState(route.params.item);
   const {isposting} = useContext(AuthContext);
   useEffect(() => {
     // console.log('get fil post', route?.params?.selectedcategory);
-  }, [isFocused]);
-  const [categoryIcons, setcategoryIcons] = useState([
-    {id: 1, title: 'men', img: require('../assets/phone.png')},
-    {id: 2, title: 'women', img: require('../assets/Laptop.png')},
-    {id: 3, title: 'children', img: require('../assets/medicine.png')},
-  ]);
+  }, [isFocused]); 
 
   const rendersquareList = ({item, index}) => {
     return (

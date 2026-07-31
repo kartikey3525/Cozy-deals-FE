@@ -22,8 +22,7 @@ const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
 export default function OTPScreen({navigation, route}) {
   const {theme} = useContext(ThemeContext);
-  const isDark = theme === 'dark';
-  const [modalVisible, setModalVisible] = useState(false);
+  const isDark = theme === 'dark'; 
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(600); // 10 minutes in seconds
   const [resendDisabled, setResendDisabled] = useState(false);
@@ -229,11 +228,7 @@ export default function OTPScreen({navigation, route}) {
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.blueBotton}
-        // onPress={() => setModalVisible(true)}
-        // onPress={() => navigation.navigate('AddressScreen')}
-        onPress={() => handlePress()}>
+      <TouchableOpacity style={styles.blueBotton} onPress={() => handlePress()}>
         <Text
           style={[
             styles.smallText,
@@ -242,26 +237,6 @@ export default function OTPScreen({navigation, route}) {
           Verify
         </Text>
       </TouchableOpacity>
-
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}>
-        <TouchableOpacity
-          style={styles.modalContainer}
-          onPress={() => setModalVisible(false)}>
-          <View style={styles.modalContent}>
-            <Image
-              source={
-                isDark
-                  ? require('../assets/error-popup-dark.png')
-                  : require('../assets/error-popup.png')
-              }
-              style={{width: 380, height: 400, borderRadius: 10}}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </ScrollView>
   );
 }

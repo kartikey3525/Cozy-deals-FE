@@ -77,60 +77,6 @@ export default function PostDetails({navigation, route}) {
     location: '',
   });
 
-  // const requestLocationPermission = async () => {
-  //   try {
-  //     if (Platform.OS === 'android') {
-  //       const granted = await PermissionsAndroid.request(
-  //         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-  //         {
-  //           title: 'Location Access Required',
-  //           message: 'This app needs to access your location to proceed.',
-  //           buttonPositive: 'OK',
-  //         },
-  //       );
-
-  //       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-  //         getLocation();
-  //         return true;
-  //       } else {
-  //         setErrors((prev) => ({
-  //           ...prev,
-  //           location: 'Location permission denied.',
-  //         }));
-  //         return false;
-  //       }
-  //     } else {
-  //       getLocation();
-  //       return true;
-  //     }
-  //   } catch (err) {
-  //     console.warn('Permission error:', err);
-  //     setErrors((prev) => ({
-  //       ...prev,
-  //       location: 'Unable to request location permission.',
-  //     }));
-  //     return false;
-  //   }
-  // };
-
-  // const getLocation = () => {
-  //   Geolocation.getCurrentPosition(
-  //     (position) => {
-  //       const { latitude, longitude } = position.coords;
-  //       setLocation({ latitude, longitude });
-  //       setErrors((prev) => ({ ...prev, location: '' }));
-  //     },
-  //     (error) => {
-  //       console.error('Location error:', error);
-  //       setErrors((prev) => ({
-  //         ...prev,
-  //         location: 'Unable to fetch location. Please try again.',
-  //       }));
-  //     },
-  //     { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
-  //   );
-  // };
-
   const validateInputs = () => {
     let valid = true;
     let newErrors = {

@@ -213,8 +213,7 @@ export default function HomeScreen({navigation}) {
 
   const darkModeStyles = getStyles(isDark, notificationList); // Pass notificationList here
 
-  const isFocused = useIsFocused();
-  const [modalVisible, setModalVisible] = useState(false);
+  const isFocused = useIsFocused(); 
   const [filteredLists, setFilteredLists] = useState(
     userRole === 'buyer' ? [recentPosts ?? [], nearbyPosts ?? []] : posts ?? [],
   );
@@ -627,21 +626,6 @@ export default function HomeScreen({navigation}) {
           </ScrollView>
         )}
       </View>
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}>
-        <TouchableOpacity
-          style={styles.modalContainer}
-          onPress={() => setModalVisible(false)}>
-          <View style={styles.modalContent}>
-            <Image
-              source={require('../assets/error-popup.png')}
-              style={{width: 380, height: 400, borderRadius: 10}}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }

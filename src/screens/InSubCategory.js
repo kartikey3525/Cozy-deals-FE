@@ -22,13 +22,7 @@ import Header from '../components/Header';
 export default function InSubCategory({navigation, route}) {
   const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
-const [filteredLists, setFilteredLists] = useState(route.params.item);
-
-  const [categoryIcons, setcategoryIcons] = useState([
-    {id: 1, title: 'shirt', img: require('../assets/phone.png')},
-    {id: 2, title: 'pent', img: require('../assets/Laptop.png')},
-    {id: 3, title: 'coat', img: require('../assets/medicine.png')},
-  ]);
+  const [filteredLists, setFilteredLists] = useState(route.params.item);
 
   const rendersquareList = ({item, index}) => {
     return (
@@ -93,10 +87,10 @@ const [filteredLists, setFilteredLists] = useState(route.params.item);
           justifyContent: 'center',
           alignItems: 'center',
         }}>
-         <SearchBar
+        <SearchBar
           placeholder={'Search Categories'}
-          lists={route.params.item}  
-          setFilteredLists={setFilteredLists} 
+          lists={route.params.item}
+          setFilteredLists={setFilteredLists}
           searchKey="name"
         />
 

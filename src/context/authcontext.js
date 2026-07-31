@@ -599,10 +599,9 @@ const AuthProvider = ({children}) => {
   const getPosts = async (category = null) => {
     try {
       const url = category
-        ? `/api/requirementPost/getRequirement?category=${
-            encodeURIComponent()
-            // category.trim(),
-          }`
+        ? `/api/requirementPost/getRequirement?category=${encodeURIComponent(
+            category.trim(),
+          )}`
         : '/api/requirementPost/getRequirement';
       const response = await apiClient.get(url, {
         headers: getAuthHeaders(userdata?.token),
@@ -610,9 +609,8 @@ const AuthProvider = ({children}) => {
       // setposts(response.data.data);
       console.log('setposts', response.data.data);
       const filtered = response.data.data.filter(post =>
-        isWithinRadius(post.latitude, post.longitude),
+        isWithinRadius(post.location?.latitude, post.location?.longitude),
       );
-
       setposts(filtered);
     } catch (error) {
       handleApiError(error, 'Failed to load posts.');

@@ -1,51 +1,36 @@
-import React, { useContext, useEffect, useState } from 'react';
+import {useIsFocused} from '@react-navigation/native';
+import React, {useContext, useEffect, useState} from 'react';
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
+  Alert,
   Dimensions,
-  ScrollView,
-  TouchableOpacity,
   FlatList,
+  Image,
   Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import Entypo from 'react-native-vector-icons/Entypo';
-import { ThemeContext } from '../context/themeContext';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
-import { useIsFocused } from '@react-navigation/native';
-import Share from 'react-native-share';
-import { AuthContext } from '../context/authcontext';
-const { width, height } = Dimensions.get('window');
+import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
+const {width, height} = Dimensions.get('window');
 
-export default function SellerProductDetails({ navigation, route }) {
-  const { theme } = useContext(ThemeContext);
+export default function SellerProductDetails({navigation, route}) {
+  const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
   const [Data, setData] = useState([]);
   const isFocused = useIsFocused();
-  const {    Userfulldata,} = useContext(AuthContext);
+  const {Userfulldata} = useContext(AuthContext);
   useEffect(() => {
     // console.log('data', route.params.item.images);
-    setData(route?.params?.item); 
+    setData(route?.params?.item);
   }, [isFocused]);
 
-  const product = {
-    id: 1,
-    title: 'Samsung Phone',
-    location: 'New York, USA ',
-    contact: '+1 234 567 890',
-    email: 'contact@samsung.com',
-    description:
-      'Looking for Blue Cotton T-Shirts in bulk? I need high-quality T-shirts in sizes M, L, and XL. Please share the price, delivery options, and other details. Contact me for further requirements.',
-    images: [
-      require('../assets/sam-phone.png'),
-      require('../assets/watch.png'),
-      require('../assets/packagedfood.png'),
-    ],
-  };
-
-  const ImageCarousel = ({ images }) => {
+  const ImageCarousel = ({images}) => {
     return (
       <View style={styles.carouselContainer}>
         <FlatList
@@ -57,7 +42,7 @@ export default function SellerProductDetails({ navigation, route }) {
           snapToInterval={width * 0.9} // Snap to the width of each image
           decelerationRate="fast"
           snapToAlignment="center"
-          renderItem={({ item }) => (
+          renderItem={({item}) => (
             <View
               style={{
                 width: width * 0.9, // Match snapToInterval
@@ -65,7 +50,7 @@ export default function SellerProductDetails({ navigation, route }) {
                 alignItems: 'center',
               }}>
               <Image
-                source={{ uri: item }}
+                source={{uri: item}}
                 style={{
                   width: width * 0.85,
                   height: height * 0.4,
@@ -101,37 +86,72 @@ export default function SellerProductDetails({ navigation, route }) {
       Alert.alert('Error', 'Could not open WhatsApp');
     }
   };
-  
-const shareProductDeepLink = async () => {
-  try {
-    // Replace with your actual domain and product ID
-    const productId = Data._id || Data.id; // Use your product ID field
-    const deepLink = `https://yourdomain.com/product/${productId}`;
-    const playStoreLink = 'https://play.google.com/store/apps/details?id=com.yourpackage';
-    
-    const message = `Check out this product: ${Data.productName}\n\n${deepLink}\n\n` +
-                   `If you don't have our app installed, get it here: ${playStoreLink}`;
 
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `whatsapp://send?text=${encodedMessage}`;
+  const shareProductDeepLink = async () => {
+    try {
+      // Replace with your actual domain and product ID
+      const productId = Data._id || Data.id; // Use your product ID field
+      const deepLink = `https://yourdomain.com/product/${productId}`;
+      const playStoreLink =
+        'https://play.google.com/store/apps/details?id=com.yourpackage';
 
-    // Check if WhatsApp is installed
-    const supported = await Linking.canOpenURL(whatsappUrl);
-    
-    if (supported) {
-      await Linking.openURL(whatsappUrl);
-    } else {
-      // Fallback to web version if WhatsApp isn't installed
-      const webUrl = `https://wa.me/?text=${encodedMessage}`;
-      await Linking.openURL(webUrl);
+      const message =
+        `Check out this product: ${Data.productName}\n\n${deepLink}\n\n` +
+        `If you don't have our app installed, get it here: ${playStoreLink}`;
+
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `whatsapp://send?text=${encodedMessage}`;
+
+      // Check if WhatsApp is installed
+      const supported = await Linking.canOpenURL(whatsappUrl);
+
+      if (supported) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        // Fallback to web version if WhatsApp isn't installed
+        const webUrl = `https://wa.me/?text=${encodedMessage}`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      console.error('Error sharing product:', error);
+      Alert.alert('Error', 'Could not share product');
     }
-  } catch (error) {
-    console.error('Error sharing product:', error);
-    Alert.alert('Error', 'Could not share product');
-  }
-};
-  
-  
+  };
+
+  const openMap = async () => {
+    try {
+      // If latitude & longitude are available
+      if (Data?.location?.latitude && Data?.location?.longitude) {
+        const {latitude, longitude} = Data.location;
+
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+
+        await Linking.openURL(url);
+        return;
+      }
+
+      // Fallback to address
+      const address =
+        typeof Data.location === 'string'
+          ? Data.location
+          : Data.location?.address || Data.businessAddress || '';
+
+      if (!address) {
+        Alert.alert('Location', 'Location not available');
+        return;
+      }
+
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        address,
+      )}`;
+
+      await Linking.openURL(url);
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Error', 'Unable to open map');
+    }
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -157,17 +177,38 @@ const shareProductDeepLink = async () => {
           {Data.description}
         </Text>
         <Text style={[styles.info, {color: isDark ? '#fff' : '#000'}]}>
-          <Ionicons name="location-outline" size={16} />
-          {typeof Data.location === 'string'
-            ? Data.location
-            : Data.location?.address || 'N/A'}
-        </Text>
-        <Text style={[styles.info, {color: isDark ? '#fff' : '#000'}]}>
           <Ionicons name="call-outline" size={16} /> {Data.contactNumber}
         </Text>
         <Text style={[styles.info, {color: isDark ? '#fff' : '#000'}]}>
           <Ionicons name="mail-outline" size={16} /> {Data.contactEmail}
         </Text>
+        <TouchableOpacity
+          onPress={openMap}
+          activeOpacity={0.7}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginVertical: 4,
+          }}>
+          <Ionicons name="location-outline" size={18} color="#0F5CF6" />
+
+          <Text
+            style={[
+              styles.info,
+              {
+                color: '#0F5CF6',
+                textDecorationLine: 'underline',
+                marginLeft: 5,
+                flex: 1,
+              },
+            ]}>
+            {typeof Data.location === 'string'
+              ? Data.location
+              : Data.location?.address ||
+                Data.businessAddress ||
+                'Location not available'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Action Buttons */}
