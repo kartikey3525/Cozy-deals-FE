@@ -15,8 +15,8 @@ import {
   Platform,
 } from 'react-native';
 import io from 'socket.io-client';
-// const API_URL = 'http://10.0.2.2:8080';
-const API_URL = 'https://cozy-deals-be-production.up.railway.app';
+const API_URL = 'http://10.0.2.2:8080';
+// const API_URL = 'https://cozy-deals-be-production.up.railway.app';
 
 const AuthContext = createContext();
 
@@ -302,7 +302,7 @@ const AuthProvider = ({children}) => {
       await apiClient.post('/api/user/sendOTP', {
         emailPhone: email,
         password,
-        userName: name,
+        name,
         isAcceptTermConditions: true,
         roleId: userRole === 'buyer' ? 0 : 1,
         fcmToken,
@@ -310,7 +310,14 @@ const AuthProvider = ({children}) => {
       await AsyncStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
       navigation.navigate('OTPScreen', {emailPhone: email, password});
     } catch (error) {
-      handleApiError(error, 'Email already exists.');
+      console.log('REGISTER ERROR:', error.response?.data || error.message);
+
+      handleApiError(
+        error,
+        error.response?.data?.msg ||
+          error.response?.data?.message ||
+          'Registration failed.',
+      );
     } finally {
       setIsLoading(prev => ({...prev, register: false}));
     }
