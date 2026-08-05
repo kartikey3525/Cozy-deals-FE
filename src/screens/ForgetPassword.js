@@ -1,26 +1,26 @@
+import React, {useContext, useState} from 'react';
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
+  View,
 } from 'react-native';
-import React, {useContext} from 'react';
 import {HelperText} from 'react-native-paper';
-import {useState} from 'react';
+import Entypo from 'react-native-vector-icons/Entypo';
+import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
 import {AuthContext} from '../context/authcontext';
-import {Dimensions} from 'react-native';
-import Entypo from 'react-native-vector-icons/Entypo'; 
+import {ThemeContext} from '../context/themeContext';
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
-import {ThemeContext} from '../context/themeContext';
-import KeyboardAvoidingContainer from '../components/KeyboardAvoided';
 
 export default function ForgetPassword({navigation}) {
   const [email, setEmail] = useState('');
   const [description, setdescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
   const {theme} = useContext(ThemeContext);
   const isDark = theme === 'dark';
 
@@ -34,7 +34,7 @@ export default function ForgetPassword({navigation}) {
   const validateInputs = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
-    
+
     if (email && phoneRegex.test(email)) {
       // phone number is valid
     } else if (email && emailRegex.test(email)) {
@@ -47,17 +47,17 @@ export default function ForgetPassword({navigation}) {
       return false;
     }
 
-    setErrors({email: '', });
+    setErrors({email: ''});
     return true;
   };
 
   const handlePress = async () => {
-    setErrors({email: '', });
+    setErrors({email: ''});
     if (!validateInputs()) return;
 
     setIsLoading(true);
     try {
-       await handleForgetPassword(email,);
+      await handleForgetPassword(email);
       // navigation.navigate('OTPScreen', {
       //   emailPhone: email,
       // });
@@ -151,17 +151,20 @@ export default function ForgetPassword({navigation}) {
         </HelperText>
 
         <TouchableOpacity
-          style={styles.blueBotton}
-          // onPress={() => navigation.navigate('OTPScreen')}
+          style={[styles.blueBotton, isLoading && {opacity: 0.6}]}
           onPress={() => handlePress()}
-        >
-          <Text
-            style={[
-              styles.smallText,
-              {color: '#fff', fontSize: 22, marginBottom: 0},
-            ]}>
-            Continue
-          </Text>
+          disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text
+              style={[
+                styles.smallText,
+                {color: '#fff', fontSize: 22, marginBottom: 0},
+              ]}>
+              Continue
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingContainer>

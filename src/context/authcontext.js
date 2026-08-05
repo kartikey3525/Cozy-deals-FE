@@ -82,6 +82,7 @@ const AuthProvider = ({children}) => {
     register: false,
     login: false,
     google: false,
+    newPassword: false,
   });
   const [fcmToken, setFcmToken] = useState(null);
   const [socket, setSocket] = useState(null);
@@ -302,7 +303,7 @@ const AuthProvider = ({children}) => {
       await apiClient.post('/api/user/sendOTP', {
         emailPhone: email,
         password,
-        name,
+        userName: name,
         isAcceptTermConditions: true,
         roleId: userRole === 'buyer' ? 0 : 1,
         fcmToken,
@@ -310,14 +311,7 @@ const AuthProvider = ({children}) => {
       await AsyncStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
       navigation.navigate('OTPScreen', {emailPhone: email, password});
     } catch (error) {
-      console.log('REGISTER ERROR:', error.response?.data || error.message);
-
-      handleApiError(
-        error,
-        error.response?.data?.msg ||
-          error.response?.data?.message ||
-          'Registration failed.',
-      );
+      handleApiError(error, 'Email already exists.');
     } finally {
       setIsLoading(prev => ({...prev, register: false}));
     }
@@ -486,14 +480,13 @@ const AuthProvider = ({children}) => {
     }
   };
 
-  // Password Reset Functions
   const handleForgetPassword = async email => {
     try {
       const response = await apiClient.post('/api/user/sendForgotPasswordOTP', {
-        email,
+        emailPhone: email,
       });
-      Alert.alert('OTP Sent', response.data.msg);
       navigation.navigate('OTPScreen', {emailPhone: email});
+      // Alert.alert('OTP Sent Check your Email', response.data.msg);
     } catch (error) {
       handleApiError(error, 'Failed to send OTP.');
     }
@@ -508,12 +501,20 @@ const AuthProvider = ({children}) => {
     }
   };
 
-  const handleNewPassword = async (email, newPassword) => {
+  const handleNewPassword = async (emailPhone, otp, newPassword) => {
+    setIsLoading(prev => ({...prev, newPassword: true}));
     try {
-      await apiClient.post('/api/user/resetPassword', {email, newPassword});
+      await apiClient.post('/api/user/resetPassword', {
+        emailPhone,
+        otp,
+        newPassword,
+      });
+      Alert.alert('Success', 'Password reset successfully.');
       navigation.navigate('Login');
     } catch (error) {
       handleApiError(error, 'Failed to reset password.');
+    } finally {
+      setIsLoading(prev => ({...prev, newPassword: false}));
     }
   };
 

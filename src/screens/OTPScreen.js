@@ -53,7 +53,15 @@ export default function OTPScreen({navigation, route}) {
 
     setIsLoading(true);
     try {
-      await route?.params?.password?VerifyOTP(route?.params?.emailPhone, otp) : handleVerifyPasswordOtp(route?.params?.emailPhone, otp);
+      if (route?.params?.password) {
+        await VerifyOTP(route?.params?.emailPhone, otp);
+      } else {
+        // forgot-password flow: no separate verify call, just carry otp forward
+        navigation.navigate('NewPassword', {
+          emailPhone: route?.params?.emailPhone,
+          otp,
+        });
+      }
     } catch (error) {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {

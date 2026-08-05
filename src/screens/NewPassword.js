@@ -1,26 +1,23 @@
 import React, {useContext, useState} from 'react';
 import {
-  View,
-  Text,
-  Image,
+  Alert,
+  Dimensions,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Pressable,
-  Alert,
+  View,
 } from 'react-native';
 import {HelperText} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {AuthContext} from '../context/authcontext';
-import {Dimensions} from 'react-native';
-import {ThemeContext} from '../context/themeContext';
 import Header from '../components/Header';
+import {AuthContext} from '../context/authcontext';
+import {ThemeContext} from '../context/themeContext';
 
 const Width = Dimensions.get('window').width;
 const Height = Dimensions.get('window').height;
 
-export default function NewPassword({navigation,route}) {
+export default function NewPassword({navigation, route}) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,23 +30,24 @@ export default function NewPassword({navigation,route}) {
   const isDark = theme === 'dark';
 
   // Utility functions for input validation
-  const containsEmojis = (text) => {
-    const emojiRegex = /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+  const containsEmojis = text => {
+    const emojiRegex =
+      /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
     return emojiRegex.test(text);
   };
 
-  const validatePassword = (password) => {
+  const validatePassword = password => {
     const errors = [];
-    
-    if (password.length < 8) {
-      errors.push('Minimum 8 characters');
+
+    if (password.length < 6) {
+      errors.push('Minimum 6 characters');
     }
-    if (!/[A-Z]/.test(password)) {
-      errors.push('At least one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('At least one lowercase letter');
-    }
+    // if (!/[A-Z]/.test(password)) {
+    //   errors.push('At least one uppercase letter');
+    // }
+    // if (!/[a-z]/.test(password)) {
+    //   errors.push('At least one lowercase letter');
+    // }
     if (!/[0-9]/.test(password)) {
       errors.push('At least one number');
     }
@@ -62,7 +60,7 @@ export default function NewPassword({navigation,route}) {
     if (containsEmojis(password)) {
       errors.push('No emojis allowed');
     }
-    
+
     return errors;
   };
 
@@ -101,9 +99,13 @@ export default function NewPassword({navigation,route}) {
     if (!validateInputs()) return;
 
     try {
-      await handleNewPassword(route?.params?.email,newPassword);
-    //   Alert.alert('Success', 'Password changed successfully!');
-    navigation.navigate('Login');
+      await handleNewPassword(
+        route.params.emailPhone,
+        route.params.otp,
+        newPassword,
+      );
+      //   Alert.alert('Success', 'Password changed successfully!');
+      navigation.navigate('Login');
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to change password');
     }
@@ -112,24 +114,22 @@ export default function NewPassword({navigation,route}) {
   return (
     <View
       showsVerticalScrollIndicator={false}
-      style={[
-        styles.screen,
-        {backgroundColor: isDark ? 'black' : 'white'},
-      ]}>
+      style={[styles.screen, {backgroundColor: isDark ? 'black' : 'white'}]}>
       <Header header={''} />
-      
-      <Text style={[
-        styles.modalText,
-        {
-          fontWeight: 'bold',
-          marginBottom: 30,
-          fontSize: 30,
-          color: isDark ? '#fff' : 'rgb(0, 0, 0)',
-        },
-      ]}>
+
+      <Text
+        style={[
+          styles.modalText,
+          {
+            fontWeight: 'bold',
+            marginBottom: 30,
+            fontSize: 30,
+            color: isDark ? '#fff' : 'rgb(0, 0, 0)',
+          },
+        ]}>
         Enter new password
       </Text>
-      
+
       {/* New Password Input */}
       <View style={styles.inputContainer}>
         <TextInput
@@ -141,7 +141,7 @@ export default function NewPassword({navigation,route}) {
               color: isDark ? '#fff' : '#000',
             },
           ]}
-          onChangeText={(text) => handlePasswordChange(text, 'newPassword')}
+          onChangeText={text => handlePasswordChange(text, 'newPassword')}
           placeholder="New Password"
           mode="outlined"
           secureTextEntry={!showPassword}
@@ -175,7 +175,7 @@ export default function NewPassword({navigation,route}) {
               color: isDark ? '#fff' : '#000',
             },
           ]}
-          onChangeText={(text) => handlePasswordChange(text, 'confirmPassword')}
+          onChangeText={text => handlePasswordChange(text, 'confirmPassword')}
           placeholder="Confirm Password"
           mode="outlined"
           secureTextEntry={!showPassword}
@@ -203,21 +203,34 @@ export default function NewPassword({navigation,route}) {
         <Text style={{color: isDark ? '#fff' : '#000', fontWeight: 'bold'}}>
           Password must contain:
         </Text>
-        <Text style={{color: isDark ? '#aaa' : '#555'}}>• Minimum 8 characters</Text>
-        <Text style={{color: isDark ? '#aaa' : '#555'}}>• At least one uppercase letter</Text>
-        <Text style={{color: isDark ? '#aaa' : '#555'}}>• At least one lowercase letter</Text>
-        <Text style={{color: isDark ? '#aaa' : '#555'}}>• At least one number</Text>
-        <Text style={{color: isDark ? '#aaa' : '#555'}}>• At least one special character</Text>
-        <Text style={{color: isDark ? '#aaa' : '#555'}}>• No spaces or emojis</Text>
+        <Text style={{color: isDark ? '#aaa' : '#555'}}>
+          • Minimum 8 characters
+        </Text>
+        <Text style={{color: isDark ? '#aaa' : '#555'}}>
+          • At least one uppercase letter
+        </Text>
+        <Text style={{color: isDark ? '#aaa' : '#555'}}>
+          • At least one lowercase letter
+        </Text>
+        <Text style={{color: isDark ? '#aaa' : '#555'}}>
+          • At least one number
+        </Text>
+        <Text style={{color: isDark ? '#aaa' : '#555'}}>
+          • At least one special character
+        </Text>
+        <Text style={{color: isDark ? '#aaa' : '#555'}}>
+          • No spaces or emojis
+        </Text>
       </View>
 
       <TouchableOpacity
         style={[styles.blueBotton, {marginTop: '60%'}]}
         onPress={handleSubmit}>
-        <Text style={[
-          styles.smallText,
-          {color: '#fff', fontSize: 22, marginBottom: 0},
-        ]}>
+        <Text
+          style={[
+            styles.smallText,
+            {color: '#fff', fontSize: 22, marginBottom: 0},
+          ]}>
           Submit
         </Text>
       </TouchableOpacity>
