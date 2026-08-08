@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "945009550802-0toch5i7e59686ofv6sbvpohfh434ht5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cozydeal",
+            "certificate_hash": "37edfc1d24645d15a650abbc862bfc634ff2f45a"
+          }
+        },
+        {
           "client_id": "945009550802-16i8755206iiakqvf86tn54rk4va7krg.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
